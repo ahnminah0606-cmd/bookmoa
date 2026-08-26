@@ -1,0 +1,6 @@
+{
+  "name": "사유의 서재 (Sayu Bookshelf)",
+  "description": "두 사람이 함께 읽고 생각을 나누는 감성적인 공유 서재 및 독서 기록 공간",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["SERVER_SIDE_OPENAI_API"]
+}

@@ -1,0 +1,68 @@
+{
+  "projectInfo": {
+    "name": "ai-studio-book-club",
+    "description": "Book Club Discussion App",
+    "platform": "web"
+  },
+  "database": {
+    "collections": [
+      {
+        "name": "users",
+        "description": "User profiles",
+        "fields": [
+          { "name": "uid", "type": "string", "required": true },
+          { "name": "email", "type": "string", "required": true },
+          { "name": "displayName", "type": "string", "required": false },
+          { "name": "nickname", "type": "string", "required": false },
+          { "name": "photoURL", "type": "string", "required": false },
+          { "name": "spaceId", "type": "string", "required": false },
+          { "name": "createdAt", "type": "string", "required": true },
+          { "name": "lastLogin", "type": "string", "required": true }
+        ]
+      },
+      {
+        "name": "spaces",
+        "description": "Shared book club spaces",
+        "fields": [
+          { "name": "id", "type": "string", "required": true },
+          { "name": "users", "type": "array", "required": true },
+          { "name": "createdAt", "type": "string", "required": true }
+        ],
+        "subcollections": [
+          {
+            "name": "books",
+            "description": "Books in the shared space",
+            "fields": [
+              { "name": "id", "type": "string", "required": true },
+              { "name": "spaceId", "type": "string", "required": true },
+              { "name": "title", "type": "string", "required": true },
+              { "name": "author", "type": "string", "required": true },
+              { "name": "isbn", "type": "string", "required": false },
+              { "name": "coverImage", "type": "string", "required": false },
+              { "name": "publisher", "type": "string", "required": false },
+              { "name": "status", "type": "string", "required": true },
+              { "name": "createdAt", "type": "string", "required": true },
+              { "name": "startedAt", "type": "string", "required": false },
+              { "name": "completedAt", "type": "string", "required": false },
+              { "name": "deletedAt", "type": "string", "required": false }
+            ]
+          },
+          {
+            "name": "discussions",
+            "description": "Discussion and thoughts for books",
+            "fields": [
+              { "name": "id", "type": "string", "required": true },
+              { "name": "bookId", "type": "string", "required": true },
+              { "name": "content", "type": "string", "required": true },
+              { "name": "user1Thought", "type": "string", "required": false },
+              { "name": "user2Thought", "type": "string", "required": false },
+              { "name": "sharedSummary", "type": "string", "required": false },
+              { "name": "updatedAt", "type": "string", "required": true },
+              { "name": "updatedBy", "type": "string", "required": true }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
