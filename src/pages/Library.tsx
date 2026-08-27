@@ -140,11 +140,11 @@ export default function Library() {
             className="w-full pl-10 pr-4 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-gray-900 transition-colors"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
           <select 
             value={filter} 
             onChange={(e) => setFilter(e.target.value as any)}
-            className="px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-gray-900 appearance-none bg-white min-w-[100px]"
+            className="min-w-0 w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-gray-900 appearance-none bg-white sm:min-w-[100px]"
           >
             <option value="all">전체</option>
             <option value="reading">읽는 중</option>
@@ -154,7 +154,7 @@ export default function Library() {
           <select 
             value={sort} 
             onChange={(e) => setSort(e.target.value as any)}
-            className="px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-gray-900 appearance-none bg-white min-w-[120px]"
+            className="min-w-0 w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-gray-900 appearance-none bg-white sm:min-w-[120px]"
           >
             <option value="recent_added">최근 추가한 순</option>
             <option value="recent_read">최근 읽은 순</option>
@@ -177,7 +177,7 @@ export default function Library() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-10">
           {filteredBooks.map((book) => (
             <Link key={book.id} to={`/library/${book.id}`} className="group flex flex-col gap-3">
               <BookCover
@@ -204,8 +204,8 @@ export default function Library() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 p-4 backdrop-blur-sm">
           <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-5 border-b border-gray-100">
-              <div className="flex items-center gap-3">
+            <div className="flex items-start justify-between gap-3 p-4 sm:p-5 border-b border-gray-100">
+              <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
                 <h2 className="text-lg font-medium text-gray-900">책 추가</h2>
                 <div className="flex bg-gray-100 p-0.5 rounded-lg text-xs">
                   <button
@@ -232,7 +232,7 @@ export default function Library() {
             
             {addMode === 'search' ? (
               <>
-                <form onSubmit={handleAddSearch} className="p-4 border-b border-gray-100 flex gap-2 bg-gray-50/50">
+                <form onSubmit={handleAddSearch} className="p-4 border-b border-gray-100 flex flex-col gap-2 bg-gray-50/50 sm:flex-row">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input 
@@ -261,7 +261,7 @@ export default function Library() {
                   {addSearchResults.map((res, idx) => (
                     <div 
                       key={idx} 
-                      className="flex gap-4 p-3 border border-gray-100 rounded-xl hover:border-gray-300 hover:bg-gray-50/30 transition-all bg-white group items-center"
+                      className="flex min-w-0 gap-3 sm:gap-4 p-3 border border-gray-100 rounded-xl hover:border-gray-300 hover:bg-gray-50/30 transition-all bg-white group items-center"
                     >
                       <BookCover
                         title={res.title}
@@ -310,7 +310,7 @@ export default function Library() {
             ) : (
               /* Manual Input Form */
               <form onSubmit={handleManualSubmit} className="p-6 space-y-4 flex-1 overflow-y-auto">
-                <div className="flex gap-4 items-start">
+                <div className="flex flex-col gap-4 items-stretch sm:flex-row sm:items-start">
                   {/* Live Cover Preview */}
                   <div className="flex flex-col items-center gap-1.5 shrink-0">
                     <span className="text-[11px] text-gray-400 font-medium">표지 미리보기</span>

@@ -66,7 +66,7 @@ export default function Home() {
   }, [eligibleQuotes.length, currentReadingBook?.id]);
 
   return (
-    <div className="flex flex-col items-center justify-center h-full px-8 text-center bg-white select-none">
+    <div className="flex min-h-full w-full flex-col items-center justify-center px-5 py-12 text-center bg-white select-none sm:px-8">
       <div className="max-w-2xl w-full space-y-6">
         {quote ? (
           <div 
@@ -82,7 +82,7 @@ export default function Home() {
             <p className="text-xl md:text-2xl font-medium text-gray-900 leading-relaxed break-keep">
               "{quote.text}"
             </p>
-            <div className="pt-2 flex items-center justify-center gap-1.5 text-[11px] text-gray-300 group-hover:text-gray-500 transition-colors">
+            <div className="pt-2 flex items-start justify-center gap-1.5 text-[11px] leading-relaxed text-gray-300 group-hover:text-gray-500 transition-colors">
               <Sparkles className="w-3.5 h-3.5" />
               <span>완독한 서재의 사유를 다시 마주하는 중 (클릭 시 다른 문장)</span>
             </div>

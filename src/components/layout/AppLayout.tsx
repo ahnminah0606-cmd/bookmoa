@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { BookOpen, Home, Book, Library, Activity, Trash2, ChevronDown, LogOut, UserPlus, Copy, Check, X } from 'lucide-react';
+import { BookOpen, Home, Book, Library, Activity, Trash2, ChevronDown, LogOut, UserPlus, Copy, Check, X, Menu } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function AppLayout() {
@@ -11,6 +11,7 @@ export default function AppLayout() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const inviteCode = user?.spaceId || 'SAYU-INIT';
@@ -24,6 +25,23 @@ export default function AppLayout() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    setIsDrawerOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!isDrawerOpen) return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsDrawerOpen(false);
+    };
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.body.style.overflow = '';
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isDrawerOpen]);
 
   const navItems = [
     { name: '홈', path: '/', icon: Home },
@@ -46,9 +64,9 @@ export default function AppLayout() {
   };
 
   return (
-    <div className="flex h-screen bg-white text-gray-900 font-sans overflow-hidden">
+    <div className="flex h-screen h-dvh w-full min-w-0 bg-white text-gray-900 font-sans overflow-hidden">
       {/* Left Sidebar */}
-      <aside className="w-64 border-r border-gray-100 flex flex-col justify-between shrink-0 bg-white">
+      <aside className="hidden md:flex w-64 border-r border-gray-100 flex-col justify-between shrink-0 bg-white">
         <div>
           <div className="h-20 flex items-center px-6">
             <Link to="/" className="flex items-center gap-3 font-semibold text-gray-900">
@@ -156,9 +174,56 @@ export default function AppLayout() {
         </div>
       </aside>
 
+      {isDrawerOpen && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          <button type="button" aria-label="메뉴 닫기" className="absolute inset-0 bg-black/25 backdrop-blur-[1px]" onClick={() => setIsDrawerOpen(false)} />
+          <aside id="mobile-navigation" role="dialog" aria-modal="true" aria-label="주 메뉴" className="absolute inset-y-0 left-0 flex w-[min(82vw,320px)] flex-col bg-white shadow-2xl">
+            <div className="flex h-16 shrink-0 items-center justify-between border-b border-gray-100 px-5">
+              <Link to="/" className="flex items-center gap-3 font-semibold text-gray-900">
+                <BookOpen className="h-5 w-5" /><span>사유의 서재</span>
+              </Link>
+              <button type="button" onClick={() => setIsDrawerOpen(false)} aria-label="메뉴 닫기" className="rounded-lg p-2 text-gray-500 hover:bg-gray-50 hover:text-gray-900">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link key={item.path} to={item.path} className={cn('flex items-center gap-3 rounded-lg px-3.5 py-3 text-sm transition-colors', isActive ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-500 hover:bg-gray-50/50 hover:text-gray-900')}>
+                    <Icon className="h-4 w-4 shrink-0" /><span>{item.name}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+            <div className="space-y-1 border-t border-gray-100 p-3">
+              <button type="button" onClick={() => { setIsDrawerOpen(false); setIsInviteModalOpen(true); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50">
+                <UserPlus className="h-4 w-4 shrink-0 text-gray-400" /><span className="flex-1">파트너 초대</span>
+                <span className="max-w-24 truncate rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] text-gray-500">{inviteCode}</span>
+              </button>
+              <Link to="/trash" className="flex items-center gap-2.5 rounded-lg px-3 py-3 text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-900">
+                <Trash2 className="h-4 w-4 shrink-0 text-gray-400" /><span>휴지통</span>
+              </Link>
+              <button type="button" onClick={handleLogout} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-3 text-left text-sm text-red-600 hover:bg-red-50/50">
+                <LogOut className="h-4 w-4 shrink-0" /><span>로그아웃</span>
+              </button>
+            </div>
+          </aside>
+        </div>
+      )}
+
       {/* Main Content Area - Completely free of overlapping floating widgets */}
-      <main className="flex-1 relative flex flex-col overflow-hidden bg-white">
-        <div className="flex-1 overflow-y-auto">
+      <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-white">
+        <header className="flex h-16 shrink-0 items-center border-b border-gray-100 px-4 md:hidden">
+          <button type="button" onClick={() => setIsDrawerOpen(true)} aria-label="메뉴 열기" aria-controls="mobile-navigation" aria-expanded={isDrawerOpen} className="-ml-2 rounded-lg p-2 text-gray-700 hover:bg-gray-50">
+            <Menu className="h-5 w-5" />
+          </button>
+          <Link to="/" className="ml-2 flex min-w-0 items-center gap-2 font-semibold text-gray-900">
+            <BookOpen className="h-4 w-4 shrink-0" /><span className="truncate text-sm">사유의 서재</span>
+          </Link>
+        </header>
+        <div className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
           <Outlet />
         </div>
       </main>
@@ -166,7 +231,7 @@ export default function AppLayout() {
       {/* Partner Invite Modal */}
       {isInviteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 p-4 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden p-6 space-y-6">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden p-5 sm:p-6 space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-medium text-gray-900">파트너 초대</h2>
               <button 
@@ -182,10 +247,10 @@ export default function AppLayout() {
             </p>
 
             {/* Invite Code Box */}
-            <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-between">
-              <div>
+            <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 flex flex-col gap-3 min-[380px]:flex-row min-[380px]:items-center min-[380px]:justify-between">
+              <div className="min-w-0">
                 <span className="text-xs text-gray-400 block mb-0.5">내 서재 초대 코드</span>
-                <span className="text-lg font-mono font-medium text-gray-900 tracking-wider">
+                <span className="block truncate text-base sm:text-lg font-mono font-medium text-gray-900 tracking-wider">
                   {inviteCode}
                 </span>
               </div>

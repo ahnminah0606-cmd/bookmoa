@@ -244,12 +244,12 @@ export default function BookDetail() {
     <div className="max-w-4xl mx-auto py-8 px-4 md:px-8 space-y-12 pb-28">
       {/* 1. Header & Navigation */}
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <Link to="/library" className="inline-flex items-center text-sm text-gray-400 hover:text-gray-900 transition-colors">
             <ChevronLeft className="w-4 h-4 mr-1" />
             라이브러리
           </Link>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             {book.status !== 'reading' && (
               <button 
                 onClick={handleSetCurrent}
@@ -278,7 +278,7 @@ export default function BookDetail() {
         
         {/* Book Info */}
         <div className="flex flex-col md:flex-row md:items-end justify-between pb-10 border-b border-gray-100/70 gap-6">
-          <div className="flex gap-6 items-end">
+          <div className="flex min-w-0 flex-col gap-5 min-[420px]:flex-row min-[420px]:items-end sm:gap-6">
             <BookCover
               title={book.title}
               author={book.author}
@@ -287,8 +287,8 @@ export default function BookDetail() {
               size="lg"
               className="w-24 h-36 shrink-0 shadow-sm"
             />
-            <div className="space-y-2.5 pb-1">
-              <h1 className="text-2xl md:text-3xl font-medium text-gray-900 tracking-tight">
+            <div className="min-w-0 space-y-2.5 pb-1">
+              <h1 className="text-2xl md:text-3xl font-medium text-gray-900 tracking-tight break-words">
                 {book.title}
               </h1>
               <div className="flex flex-wrap items-center gap-2 text-sm text-gray-400 font-light">
@@ -324,7 +324,7 @@ export default function BookDetail() {
         {/* 2-Column Comparison */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
           {/* User 1 Card (나) */}
-          <div className="bg-[#FAFAFA] rounded-2xl p-7 border border-gray-100/90 flex flex-col justify-between space-y-4 shadow-sm min-h-[170px]">
+          <div className="bg-[#FAFAFA] rounded-2xl p-5 sm:p-7 border border-gray-100/90 flex min-w-0 flex-col justify-between space-y-4 shadow-sm min-h-[170px]">
             <div className="space-y-3">
               <div className="flex items-center justify-between pb-2 border-b border-gray-200/50">
                 <span className="text-xs font-semibold text-gray-800 tracking-wide">{user1Name}</span>
@@ -388,7 +388,7 @@ export default function BookDetail() {
           </div>
 
           {/* User 2 Card (파트너) */}
-          <div className="bg-[#FAFAFA] rounded-2xl p-7 border border-gray-100/90 flex flex-col justify-between space-y-4 shadow-sm min-h-[170px]">
+          <div className="bg-[#FAFAFA] rounded-2xl p-5 sm:p-7 border border-gray-100/90 flex min-w-0 flex-col justify-between space-y-4 shadow-sm min-h-[170px]">
             <div className="space-y-3">
               <div className="flex items-center justify-between pb-2 border-b border-gray-200/50">
                 <span className="text-xs font-semibold text-gray-800 tracking-wide">{user2Name}</span>

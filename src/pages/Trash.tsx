@@ -7,7 +7,7 @@ export default function Trash() {
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4 md:px-8 pb-24">
-      <div className="flex items-center justify-between mb-12 border-b border-gray-100 pb-6">
+      <div className="flex items-start justify-between gap-4 mb-12 border-b border-gray-100 pb-6">
         <div>
           <h1 className="text-xl font-medium text-gray-900">휴지통</h1>
           <p className="text-sm text-gray-500 mt-2">삭제된 항목은 30일 후 영구 삭제됩니다.</p>
@@ -22,8 +22,8 @@ export default function Trash() {
       ) : (
         <div className="space-y-4">
           {trashBooks.map((book) => (
-            <div key={book.id} className="flex items-center justify-between p-4 bg-[#FAFAFA] rounded-xl border border-gray-100">
-              <div className="space-y-1">
+            <div key={book.id} className="flex min-w-0 items-center justify-between gap-3 p-4 bg-[#FAFAFA] rounded-xl border border-gray-100">
+              <div className="min-w-0 space-y-1">
                 <h3 className="font-medium text-gray-900">{book.title}</h3>
                 <p className="text-xs text-gray-500">
                   {new Date(book.deletedAt!).toLocaleDateString('ko-KR')} 삭제됨

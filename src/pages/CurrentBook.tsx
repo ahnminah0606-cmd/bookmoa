@@ -146,7 +146,7 @@ export default function CurrentBook() {
     <div className="max-w-4xl mx-auto py-8 px-4 md:px-8 space-y-12 pb-24">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between pb-12 border-b border-gray-100/60 gap-6">
-        <div className="flex gap-6 items-end">
+        <div className="flex min-w-0 flex-col gap-5 min-[420px]:flex-row min-[420px]:items-end sm:gap-6">
           <BookCover
             title={currentBook.title}
             author={currentBook.author}
@@ -155,11 +155,11 @@ export default function CurrentBook() {
             size="lg"
             className="w-24 h-36 shrink-0"
           />
-          <div className="space-y-3 pb-1">
-            <h1 className="text-2xl md:text-3xl font-medium text-gray-900 tracking-tight">
+          <div className="min-w-0 space-y-3 pb-1">
+            <h1 className="text-2xl md:text-3xl font-medium text-gray-900 tracking-tight break-words">
               {currentBook.title}
             </h1>
-            <div className="flex items-center gap-2 text-[15px] text-gray-400 font-light">
+            <div className="flex flex-wrap items-center gap-2 text-[15px] text-gray-400 font-light">
               <span>{currentBook.author}</span>
               <span>·</span>
               <span>
@@ -180,14 +180,14 @@ export default function CurrentBook() {
       <div className="space-y-20">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
           {/* User 1 Card */}
-          <div className="bg-[#FAFAFA] rounded-2xl p-8 flex flex-col space-y-4">
+          <div className="bg-[#FAFAFA] rounded-2xl p-5 sm:p-8 flex min-w-0 flex-col space-y-4">
             <h3 className="text-sm font-medium text-gray-400">{me}</h3>
             <p className="text-gray-800 leading-relaxed text-[15px]">
               {discussionData?.user1Thought || '토론 기록을 작성하여 저장하면 이곳에 사유가 정리됩니다.'}
             </p>
           </div>
           {/* User 2 Card */}
-          <div className="bg-[#FAFAFA] rounded-2xl p-8 flex flex-col space-y-4">
+          <div className="bg-[#FAFAFA] rounded-2xl p-5 sm:p-8 flex min-w-0 flex-col space-y-4">
             <h3 className="text-sm font-medium text-gray-700">{partnerName}</h3>
             <p className="text-gray-800 leading-relaxed text-[15px]">
               {discussionData?.user2Thought || '파트너의 사유가 이곳에 함께 기록됩니다.'}
@@ -206,7 +206,7 @@ export default function CurrentBook() {
 
       {/* Editor Area */}
       <div className="pt-24 border-t border-gray-100/60 space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-sm font-medium text-gray-400">토론 및 감상 기록</h3>
           {status === 'saving' && (
             <span className="text-xs text-gray-400">클라우드에 안전하게 저장 중...</span>
@@ -223,7 +223,7 @@ export default function CurrentBook() {
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="통화나 대화에서 기억나는 말, 다르게 본 지점, 생각이 바뀐 계기를 자유롭게 적어보세요."
-          className="w-full h-72 p-8 bg-[#FAFAFA] rounded-2xl focus:bg-white focus:border-gray-300 border border-transparent outline-none resize-none transition-all text-gray-800 leading-relaxed text-[15px]"
+          className="w-full h-72 p-4 sm:p-8 bg-[#FAFAFA] rounded-2xl focus:bg-white focus:border-gray-300 border border-transparent outline-none resize-none transition-all text-gray-800 leading-relaxed text-[15px]"
         />
 
         <div className="flex justify-end pt-2">
