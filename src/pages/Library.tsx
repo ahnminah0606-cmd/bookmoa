@@ -112,16 +112,16 @@ export default function Library() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto py-8 px-4 md:px-8 pb-24">
+    <div className="max-w-5xl mx-auto px-4 py-5 pb-16 md:px-8 md:py-8 md:pb-24">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 pb-6 border-b border-gray-100 gap-4">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between gap-3 mb-4 pb-4 border-b border-gray-100 md:mb-8 md:pb-6">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <h1 className="text-xl font-medium text-gray-900">라이브러리</h1>
-          <span className="text-sm text-gray-400">총 {filteredBooks.length}권</span>
+          <span className="shrink-0 text-xs text-gray-400 sm:text-sm">총 {filteredBooks.length}권</span>
         </div>
         <button 
           onClick={() => setIsAddModalOpen(true)}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm rounded-md hover:bg-gray-800 transition-colors shadow-sm"
+          className="inline-flex shrink-0 items-center justify-center gap-1.5 px-3 py-2 bg-gray-900 text-white text-xs rounded-md hover:bg-gray-800 transition-colors shadow-sm sm:gap-2 sm:px-4 sm:text-sm"
         >
           <Plus className="w-4 h-4" />
           책 추가
@@ -129,7 +129,7 @@ export default function Library() {
       </div>
 
       {/* Tools */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-12">
+      <div className="flex flex-col gap-2 mb-6 sm:flex-row sm:gap-4 md:mb-12">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input 
@@ -177,9 +177,9 @@ export default function Library() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-10">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-6 md:grid-cols-4 md:gap-x-6 md:gap-y-10 lg:grid-cols-5">
           {filteredBooks.map((book) => (
-            <Link key={book.id} to={`/library/${book.id}`} className="group flex flex-col gap-3">
+            <Link key={book.id} to={`/library/${book.id}`} className="group flex min-w-0 flex-col gap-2 md:gap-3">
               <BookCover
                 title={book.title}
                 author={book.author}
@@ -188,8 +188,8 @@ export default function Library() {
                 size="md"
                 className="transform group-hover:-translate-y-1 transition-transform"
               />
-              <div className="space-y-0.5 text-center px-1">
-                <h3 className="font-medium text-gray-900 text-sm leading-snug group-hover:text-gray-600 transition-colors line-clamp-2 break-keep">
+              <div className="min-w-0 space-y-0.5 px-1 text-center">
+                <h3 className="line-clamp-2 break-keep text-[13px] font-medium leading-snug text-gray-900 transition-colors group-hover:text-gray-600 sm:text-sm">
                   {book.title}
                 </h3>
                 <p className="text-xs text-gray-400 truncate">{book.author}</p>
