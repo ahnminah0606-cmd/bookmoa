@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { Home, Book, Library, Activity, Trash2, ChevronDown, LogOut, UserPlus, Copy, Check, X, Menu } from 'lucide-react';
+import { Home, Book, Library, Activity, Trash2, ChevronDown, LogOut, UserPlus, Copy, Check, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { BrandLogo } from '@/components/common/BrandLogo';
 
@@ -12,7 +12,8 @@ export default function AppLayout() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => localStorage.getItem('bookmoa-sidebar-collapsed') === 'true');
+  const [isMobileMoreOpen, setIsMobileMoreOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const inviteCode = user?.spaceId || 'SAYU-INIT';
@@ -28,13 +29,17 @@ export default function AppLayout() {
   }, []);
 
   useEffect(() => {
-    setIsDrawerOpen(false);
+    setIsMobileMoreOpen(false);
   }, [location.pathname]);
 
   useEffect(() => {
-    if (!isDrawerOpen) return;
+    localStorage.setItem('bookmoa-sidebar-collapsed', String(isSidebarCollapsed));
+  }, [isSidebarCollapsed]);
+
+  useEffect(() => {
+    if (!isMobileMoreOpen) return;
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setIsDrawerOpen(false);
+      if (event.key === 'Escape') setIsMobileMoreOpen(false);
     };
     document.body.style.overflow = 'hidden';
     document.addEventListener('keydown', handleEscape);
@@ -42,7 +47,7 @@ export default function AppLayout() {
       document.body.style.overflow = '';
       document.removeEventListener('keydown', handleEscape);
     };
-  }, [isDrawerOpen]);
+  }, [isMobileMoreOpen]);
 
   const navItems = [
     { name: '홈', path: '/', icon: Home },
@@ -50,6 +55,11 @@ export default function AppLayout() {
     { name: '라이브러리', path: '/library', icon: Library },
     { name: '생각의 흐름', path: '/flow', icon: Activity },
   ];
+
+  const isNavActive = (path: string) => {
+    if (path === '/') return location.pathname === '/' || location.pathname === '/home';
+    return location.pathname === path || location.pathname.startsWith(`${path}/`);
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -66,71 +76,88 @@ export default function AppLayout() {
 
   return (
     <div className="flex h-screen h-dvh w-full min-w-0 bg-white text-gray-900 font-sans overflow-hidden">
-      {/* Left Sidebar */}
-      <aside className="hidden md:flex w-64 border-r border-gray-100 flex-col justify-between shrink-0 bg-white">
+      {/* Desktop sidebar */}
+      <aside className={cn('relative hidden shrink-0 flex-col justify-between border-r border-gray-100 bg-white transition-[width] duration-200 md:flex', isSidebarCollapsed ? 'w-[72px]' : 'w-64')}>
         <div>
-          <div className="h-20 flex items-center px-6">
-            <Link to="/" className="flex items-center gap-3 font-semibold text-gray-900">
-              <BrandLogo className="h-9 w-9" />
-              <span>사유의 서재</span>
+          <div className={cn('flex h-20 items-center', isSidebarCollapsed ? 'justify-center px-3' : 'px-6')}>
+            <Link to="/" aria-label="사유의 서재 홈" className="flex items-center gap-3 font-semibold text-gray-900">
+              <BrandLogo className="h-10 w-10" />
+              {!isSidebarCollapsed && <span className="whitespace-nowrap">사유의 서재</span>}
             </Link>
           </div>
           <nav className="flex flex-col gap-1 px-3 mt-2">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = location.pathname === item.path;
+              const isActive = isNavActive(item.path);
               return (
                 <Link
                   key={item.path}
                   to={item.path}
+                  title={isSidebarCollapsed ? item.name : undefined}
+                  aria-label={item.name}
                   className={cn(
-                    'flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm transition-colors',
+                    'flex items-center rounded-lg py-2.5 text-sm transition-colors',
+                    isSidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-3.5',
                     isActive
                       ? 'font-medium text-gray-900 bg-gray-50'
                       : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50/50'
                   )}
                 >
-                  <Icon className="w-4 h-4" />
-                  {item.name}
+                  <Icon className="h-4 w-4 shrink-0" />
+                  {!isSidebarCollapsed && item.name}
                 </Link>
               );
             })}
           </nav>
         </div>
         
-        {/* Sidebar Footer */}
+        <button
+          type="button"
+          onClick={() => setIsSidebarCollapsed((value) => !value)}
+          aria-label={isSidebarCollapsed ? '사이드바 펼치기' : '사이드바 접기'}
+          title={isSidebarCollapsed ? '사이드바 펼치기' : '사이드바 접기'}
+          className="absolute -right-3 top-24 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-400 shadow-sm transition-colors hover:text-gray-900"
+        >
+          {isSidebarCollapsed ? <PanelLeftOpen className="h-3.5 w-3.5" /> : <PanelLeftClose className="h-3.5 w-3.5" />}
+        </button>
+
+        {/* Sidebar footer */}
         <div className="p-3 space-y-1 border-t border-gray-100/80">
           <button
             onClick={() => setIsInviteModalOpen(true)}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs text-gray-700 hover:bg-gray-50 transition-colors text-left group"
+            title={isSidebarCollapsed ? '파트너 초대' : undefined}
+            aria-label="파트너 초대"
+            className={cn('group flex w-full items-center rounded-lg py-2 text-xs text-gray-700 transition-colors hover:bg-gray-50', isSidebarCollapsed ? 'justify-center px-0' : 'justify-between px-3 text-left')}
           >
             <div className="flex items-center gap-2.5">
               <UserPlus className="w-4 h-4 text-gray-400 group-hover:text-gray-900 transition-colors" />
-              <span className="font-medium text-gray-700 group-hover:text-gray-900">파트너 초대</span>
+              {!isSidebarCollapsed && <span className="font-medium text-gray-700 group-hover:text-gray-900">파트너 초대</span>}
             </div>
-            <span className="text-[10px] font-mono text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+            {!isSidebarCollapsed && <span className="text-[10px] font-mono text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
               {inviteCode.length > 10 ? inviteCode.substring(0, 7) + '..' : inviteCode}
-            </span>
+            </span>}
           </button>
           
           <Link
             to="/trash"
             className={cn(
-              'flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors',
+              'flex items-center py-2 rounded-lg text-xs font-medium transition-colors',
+              isSidebarCollapsed ? 'justify-center px-0' : 'gap-2.5 px-3',
               location.pathname === '/trash'
                 ? 'text-gray-900 bg-gray-50'
                 : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50/50'
             )}
           >
             <Trash2 className="w-4 h-4 text-gray-400" />
-            <span>휴지통</span>
+            {!isSidebarCollapsed && <span>휴지통</span>}
           </Link>
 
           {/* User Profile in Sidebar Bottom */}
           <div className="pt-2 border-t border-gray-100/60 relative" ref={dropdownRef}>
             <div 
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+              title={isSidebarCollapsed ? (user?.nickname || '사용자') : undefined}
+              className={cn('flex items-center rounded-lg p-2 hover:bg-gray-50 cursor-pointer transition-colors', isSidebarCollapsed ? 'justify-center' : 'justify-between')}
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 {user?.photoURL ? (
@@ -144,13 +171,13 @@ export default function AppLayout() {
                     {user?.nickname ? user.nickname.charAt(0) : 'U'}
                   </div>
                 )}
-                <span className="text-xs font-medium text-gray-800 truncate">{user?.nickname || '사용자 1'}</span>
+                {!isSidebarCollapsed && <span className="text-xs font-medium text-gray-800 truncate">{user?.nickname || '사용자 1'}</span>}
               </div>
-              <ChevronDown className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+              {!isSidebarCollapsed && <ChevronDown className="w-3.5 h-3.5 text-gray-400 shrink-0" />}
             </div>
 
             {isDropdownOpen && (
-              <div className="absolute bottom-full left-0 mb-2 w-full bg-white rounded-xl shadow-lg border border-gray-100 py-1 overflow-hidden z-30">
+              <div className={cn('absolute bottom-full mb-2 bg-white rounded-xl shadow-lg border border-gray-100 py-1 overflow-hidden z-30', isSidebarCollapsed ? 'left-0 w-44' : 'left-0 w-full')}>
                 <button
                   onClick={() => {
                     setIsDropdownOpen(false);
@@ -175,59 +202,59 @@ export default function AppLayout() {
         </div>
       </aside>
 
-      {isDrawerOpen && (
-        <div className="fixed inset-0 z-40 md:hidden">
-          <button type="button" aria-label="메뉴 닫기" className="absolute inset-0 bg-black/25 backdrop-blur-[1px]" onClick={() => setIsDrawerOpen(false)} />
-          <aside id="mobile-navigation" role="dialog" aria-modal="true" aria-label="주 메뉴" className="absolute inset-y-0 left-0 flex w-[min(82vw,320px)] flex-col bg-white shadow-2xl">
-            <div className="flex h-16 shrink-0 items-center justify-between border-b border-gray-100 px-5">
-              <Link to="/" className="flex items-center gap-3 font-semibold text-gray-900">
-                <BrandLogo className="h-9 w-9" /><span>사유의 서재</span>
-              </Link>
-              <button type="button" onClick={() => setIsDrawerOpen(false)} aria-label="메뉴 닫기" className="rounded-lg p-2 text-gray-500 hover:bg-gray-50 hover:text-gray-900">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.path;
-                return (
-                  <Link key={item.path} to={item.path} className={cn('flex items-center gap-3 rounded-lg px-3.5 py-3 text-sm transition-colors', isActive ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-500 hover:bg-gray-50/50 hover:text-gray-900')}>
-                    <Icon className="h-4 w-4 shrink-0" /><span>{item.name}</span>
-                  </Link>
-                );
-              })}
-            </nav>
-            <div className="space-y-1 border-t border-gray-100 p-3">
-              <button type="button" onClick={() => { setIsDrawerOpen(false); setIsInviteModalOpen(true); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50">
-                <UserPlus className="h-4 w-4 shrink-0 text-gray-400" /><span className="flex-1">파트너 초대</span>
-                <span className="max-w-24 truncate rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] text-gray-500">{inviteCode}</span>
-              </button>
-              <Link to="/trash" className="flex items-center gap-2.5 rounded-lg px-3 py-3 text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-900">
-                <Trash2 className="h-4 w-4 shrink-0 text-gray-400" /><span>휴지통</span>
-              </Link>
-              <button type="button" onClick={handleLogout} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-3 text-left text-sm text-red-600 hover:bg-red-50/50">
-                <LogOut className="h-4 w-4 shrink-0" /><span>로그아웃</span>
-              </button>
-            </div>
-          </aside>
-        </div>
-      )}
-
-      {/* Main Content Area - Completely free of overlapping floating widgets */}
+      {/* Main content */}
       <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-white">
-        <header className="flex h-16 shrink-0 items-center border-b border-gray-100 px-4 md:hidden">
-          <button type="button" onClick={() => setIsDrawerOpen(true)} aria-label="메뉴 열기" aria-controls="mobile-navigation" aria-expanded={isDrawerOpen} className="-ml-2 rounded-lg p-2 text-gray-700 hover:bg-gray-50">
-            <Menu className="h-5 w-5" />
-          </button>
-          <Link to="/" className="ml-2 flex min-w-0 items-center gap-2 font-semibold text-gray-900">
-            <BrandLogo className="h-8 w-8" /><span className="truncate text-sm">사유의 서재</span>
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-gray-100 px-4 md:hidden">
+          <Link to="/" className="flex min-w-0 items-center gap-2 font-semibold text-gray-900">
+            <BrandLogo className="h-9 w-9" /><span className="truncate text-sm">사유의 서재</span>
           </Link>
+          <button type="button" onClick={() => setIsMobileMoreOpen(true)} aria-label="계정 메뉴 열기" className="flex h-10 w-10 items-center justify-center rounded-full transition-colors active:bg-gray-50">
+            {user?.photoURL ? (
+              <img src={user.photoURL} alt="" className="h-8 w-8 rounded-full bg-gray-100 object-cover" />
+            ) : (
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-600 text-xs font-medium text-white">{user?.nickname ? user.nickname.charAt(0) : 'U'}</span>
+            )}
+          </button>
         </header>
-        <div className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
+        <div className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto pb-[calc(64px+env(safe-area-inset-bottom))] md:pb-0">
           <Outlet />
         </div>
       </main>
+
+      {/* Mobile bottom tabs */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid h-[calc(64px+env(safe-area-inset-bottom))] grid-cols-4 border-t border-gray-100 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden" aria-label="주 메뉴">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = isNavActive(item.path);
+          return (
+            <Link key={item.path} to={item.path} aria-label={item.name} className={cn('flex items-center justify-center transition-colors', isActive ? 'text-gray-900' : 'text-gray-400')}>
+              <Icon className={cn('h-5 w-5', isActive && 'stroke-[2.4]')} />
+            </Link>
+          );
+        })}
+      </nav>
+
+      {isMobileMoreOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <button type="button" aria-label="계정 메뉴 닫기" className="absolute inset-0 bg-black/20 backdrop-blur-[1px]" onClick={() => setIsMobileMoreOpen(false)} />
+          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white px-5 pb-[calc(24px+env(safe-area-inset-bottom))] pt-3 shadow-2xl">
+            <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-gray-200" />
+            <div className="mb-5 flex items-center gap-3 px-2">
+              {user?.photoURL ? (
+                <img src={user.photoURL} alt="" className="h-11 w-11 rounded-full bg-gray-100 object-cover" />
+              ) : (
+                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-purple-600 text-sm font-medium text-white">{user?.nickname ? user.nickname.charAt(0) : 'U'}</span>
+              )}
+              <div className="min-w-0"><p className="truncate text-sm font-medium text-gray-900">{user?.nickname || '사용자 1'}</p><p className="mt-0.5 truncate text-xs text-gray-400">{user?.email || '사유의 서재'}</p></div>
+            </div>
+            <div className="space-y-1">
+              <button type="button" onClick={() => { setIsMobileMoreOpen(false); setIsInviteModalOpen(true); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-sm text-gray-700 hover:bg-gray-50"><UserPlus className="h-4 w-4 text-gray-400" /><span className="flex-1">파트너 초대</span><span className="max-w-28 truncate font-mono text-[10px] text-gray-400">{inviteCode}</span></button>
+              <Link to="/trash" className="flex items-center gap-3 rounded-xl px-3 py-3.5 text-sm text-gray-700 hover:bg-gray-50"><Trash2 className="h-4 w-4 text-gray-400" /><span>휴지통</span></Link>
+              <button type="button" onClick={handleLogout} className="flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-sm text-red-600 hover:bg-red-50/50"><LogOut className="h-4 w-4" /><span>로그아웃</span></button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Partner Invite Modal */}
       {isInviteModalOpen && (
