@@ -63,3 +63,18 @@ export type Reflection = {
   content: string; // raw text for this reflection
   updatedAt: string;
 };
+
+export type ThoughtFlowCurrent = {
+  summary: string;
+  startAt: string;
+  updatedAt: string;
+  analyzedThrough: string;
+};
+
+export type ThoughtFlowHistory = {
+  id: string;
+  summary: string;
+  startAt: string;
+  endAt: string;
+  createdAt: string;
+};

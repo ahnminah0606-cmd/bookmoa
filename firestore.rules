@@ -60,6 +60,15 @@ service cloud.firestore {
       match /discussions/{discussionId} {
         allow read, write: if isSpaceMember(spaceId);
       }
+
+      // AI-generated current thought flow and immutable prior versions.
+      match /flow/{flowId} {
+        allow read, write: if isSpaceMember(spaceId);
+      }
+
+      match /flowHistory/{historyId} {
+        allow read, write: if isSpaceMember(spaceId);
+      }
     }
   }
 }
