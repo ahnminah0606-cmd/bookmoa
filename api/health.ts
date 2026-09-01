@@ -18,14 +18,14 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
   }
 
   try {
-    await import('../server/openai');
+    await import('../server/openai.js');
     checks.openaiModule = 'ok';
   } catch (error) {
     checks.openaiModule = error instanceof Error ? error.message : 'failed';
   }
 
   try {
-    await import('../server/auth');
+    await import('../server/auth.js');
     checks.authModule = 'ok';
   } catch (error) {
     checks.authModule = error instanceof Error ? error.message : 'failed';

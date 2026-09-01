@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createDiscussionSummary, toPublicOpenAIError } from '../server/openai';
-import { verifyFirebaseToken } from '../server/auth';
+import { createDiscussionSummary, toPublicOpenAIError } from '../server/openai.js';
+import { verifyFirebaseToken } from '../server/auth.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
