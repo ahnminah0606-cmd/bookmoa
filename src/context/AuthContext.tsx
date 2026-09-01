@@ -1,7 +1,18 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { auth, db, googleProvider } from '../lib/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, arrayUnion, onSnapshot, collection, query, where } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, onSnapshot, runTransaction } from 'firebase/firestore';
+
+const INVITE_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+function generateInviteCode() {
+  const randomValues = new Uint32Array(8);
+  crypto.getRandomValues(randomValues);
+  const suffix = Array.from(randomValues, (value) =>
+    INVITE_CODE_ALPHABET[value % INVITE_CODE_ALPHABET.length]
+  ).join('');
+  return `SAYU-${suffix}`;
+}
 
 export interface AppUser {
   uid: string;
@@ -142,25 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const currentSpaceId = user.spaceId.trim().toUpperCase();
 
-    // 1. Direct query on 'users' collection with matching spaceId
-    const usersQuery = query(
-      collection(db, 'users'),
-      where('spaceId', '==', currentSpaceId)
-    );
-
-    const unsubUsersQuery = onSnapshot(usersQuery, (snapshot) => {
-      const partnerDoc = snapshot.docs.find((d) => d.id !== user.uid);
-      if (partnerDoc) {
-        const pData = partnerDoc.data() as AppUser;
-        setPartner(pData);
-      } else {
-        // Fallback: If not found in query, let space listener try
-      }
-    }, (err) => {
-      console.warn("Users query snapshot error:", err);
-    });
-
-    // 2. Space document listener as complementary safety
+    // The space membership list is the single source of truth for partner access.
     const spaceRef = doc(db, 'spaces', currentSpaceId);
     let unsubPartnerDoc: (() => void) | null = null;
 
@@ -176,16 +169,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           unsubPartnerDoc = onSnapshot(partnerRef, (pSnap) => {
             if (pSnap.exists()) {
               setPartner(pSnap.data() as AppUser);
+            } else {
+              setPartner(null);
             }
           });
+        } else {
+          if (unsubPartnerDoc) {
+            unsubPartnerDoc();
+            unsubPartnerDoc = null;
+          }
+          setPartner(null);
         }
+      } else {
+        setPartner(null);
       }
     }, (err) => {
       console.warn("Space snapshot error:", err);
     });
 
     return () => {
-      unsubUsersQuery();
       unsubSpace();
       if (unsubPartnerDoc) unsubPartnerDoc();
     };
@@ -233,22 +235,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const cleanCode = code.trim().toUpperCase();
         const spaceRef = doc(db, 'spaces', cleanCode);
-        const spaceSnap = await getDoc(spaceRef);
-
-        if (!spaceSnap.exists()) {
-          await setDoc(spaceRef, {
-            id: cleanCode,
-            users: [auth.currentUser.uid],
-            createdAt: new Date().toISOString()
-          });
-        } else {
-          await updateDoc(spaceRef, {
-            users: arrayUnion(auth.currentUser.uid)
-          });
-        }
-
         const userRef = doc(db, 'users', auth.currentUser.uid);
-        await updateDoc(userRef, { spaceId: cleanCode });
+
+        await runTransaction(db, async (transaction) => {
+          const spaceSnap = await transaction.get(spaceRef);
+          if (!spaceSnap.exists()) {
+            throw new Error('SPACE_NOT_FOUND');
+          }
+
+          const members = (spaceSnap.data().users || []) as string[];
+          const isAlreadyMember = members.includes(auth.currentUser!.uid);
+
+          if (!isAlreadyMember && members.length >= 2) {
+            throw new Error('SPACE_FULL');
+          }
+
+          if (!isAlreadyMember) {
+            transaction.update(spaceRef, { users: [...members, auth.currentUser!.uid] });
+          }
+          transaction.update(userRef, { spaceId: cleanCode });
+        });
+
         setUser(prev => prev ? { ...prev, spaceId: cleanCode } : null);
       } catch (error) {
         console.error('Error joining space:', error);
@@ -260,20 +267,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const createSpace = async (): Promise<string> => {
     if (user && auth.currentUser) {
       try {
-        const randomNum = Math.floor(1000 + Math.random() * 9000);
-        const newSpaceId = `SAYU-${randomNum}`;
-        const spaceRef = doc(db, 'spaces', newSpaceId);
-
-        await setDoc(spaceRef, {
-          id: newSpaceId,
-          users: [auth.currentUser.uid],
-          createdAt: new Date().toISOString()
-        });
-
         const userRef = doc(db, 'users', auth.currentUser.uid);
-        await updateDoc(userRef, { spaceId: newSpaceId });
-        setUser(prev => prev ? { ...prev, spaceId: newSpaceId } : null);
-        return newSpaceId;
+        for (let attempt = 0; attempt < 5; attempt += 1) {
+          const newSpaceId = generateInviteCode();
+          const spaceRef = doc(db, 'spaces', newSpaceId);
+
+          try {
+            await runTransaction(db, async (transaction) => {
+              const existingSpace = await transaction.get(spaceRef);
+              if (existingSpace.exists()) {
+                throw new Error('SPACE_CODE_COLLISION');
+              }
+
+              transaction.set(spaceRef, {
+                id: newSpaceId,
+                users: [auth.currentUser!.uid],
+                createdAt: new Date().toISOString()
+              });
+              transaction.update(userRef, { spaceId: newSpaceId });
+            });
+
+            setUser(prev => prev ? { ...prev, spaceId: newSpaceId } : null);
+            return newSpaceId;
+          } catch (error) {
+            if (error instanceof Error && error.message === 'SPACE_CODE_COLLISION') {
+              continue;
+            }
+            throw error;
+          }
+        }
+        throw new Error('SPACE_CREATE_RETRY_EXHAUSTED');
       } catch (error) {
         console.error('Error creating space:', error);
         throw error;

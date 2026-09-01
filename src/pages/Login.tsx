@@ -81,7 +81,13 @@ export default function Login() {
       try {
         await joinSpace(inviteCode.trim());
       } catch (error) {
-        setErrorMsg('초대 코드를 확인하고 다시 시도해주세요.');
+        if (error instanceof Error && error.message === 'SPACE_NOT_FOUND') {
+          setErrorMsg('존재하지 않는 초대 코드입니다. 친구에게 받은 코드를 정확히 입력해주세요.');
+        } else if (error instanceof Error && error.message === 'SPACE_FULL') {
+          setErrorMsg('이미 두 명이 참여 중인 프라이빗 서재입니다.');
+        } else {
+          setErrorMsg('서재 연결에 실패했습니다. 잠시 후 다시 시도해주세요.');
+        }
       } finally {
         setIsSubmitting(false);
       }
