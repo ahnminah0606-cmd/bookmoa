@@ -111,9 +111,6 @@ export default function Login() {
             <BrandLogo className="h-12 w-12" />
           </div>
           <h1 className="text-2xl font-medium text-gray-900 tracking-tight">사유의 서재</h1>
-          <p className="text-sm text-gray-400 mt-2 font-light">
-            두 사람이 함께 읽고 사유하는 둘만의 공유 서재
-          </p>
         </div>
 
         {step === 'login' && (
