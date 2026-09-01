@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { BookOpen, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
+import { BrandLogo } from '@/components/common/BrandLogo';
 
 export default function Login() {
   const { user, isAuthenticated, hasSpace, loading, login, setNickname, createSpace, joinSpace } = useAuth();
@@ -106,8 +107,8 @@ export default function Login() {
     <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4">
       <div className="max-w-md w-full space-y-8">
         <div className="flex flex-col items-center text-center">
-          <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center mb-4 border border-gray-100 shadow-sm">
-            <BookOpen className="w-7 h-7 text-gray-900" />
+          <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center mb-4 border border-gray-100 shadow-sm overflow-hidden">
+            <BrandLogo className="h-12 w-12" />
           </div>
           <h1 className="text-2xl font-medium text-gray-900 tracking-tight">사유의 서재</h1>
           <p className="text-sm text-gray-400 mt-2 font-light">

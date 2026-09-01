@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { BookOpen, Home, Book, Library, Activity, Trash2, ChevronDown, LogOut, UserPlus, Copy, Check, X, Menu } from 'lucide-react';
+import { Home, Book, Library, Activity, Trash2, ChevronDown, LogOut, UserPlus, Copy, Check, X, Menu } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { BrandLogo } from '@/components/common/BrandLogo';
 
 export default function AppLayout() {
   const location = useLocation();
@@ -70,7 +71,7 @@ export default function AppLayout() {
         <div>
           <div className="h-20 flex items-center px-6">
             <Link to="/" className="flex items-center gap-3 font-semibold text-gray-900">
-              <BookOpen className="w-5 h-5" />
+              <BrandLogo className="h-9 w-9" />
               <span>사유의 서재</span>
             </Link>
           </div>
@@ -180,7 +181,7 @@ export default function AppLayout() {
           <aside id="mobile-navigation" role="dialog" aria-modal="true" aria-label="주 메뉴" className="absolute inset-y-0 left-0 flex w-[min(82vw,320px)] flex-col bg-white shadow-2xl">
             <div className="flex h-16 shrink-0 items-center justify-between border-b border-gray-100 px-5">
               <Link to="/" className="flex items-center gap-3 font-semibold text-gray-900">
-                <BookOpen className="h-5 w-5" /><span>사유의 서재</span>
+                <BrandLogo className="h-9 w-9" /><span>사유의 서재</span>
               </Link>
               <button type="button" onClick={() => setIsDrawerOpen(false)} aria-label="메뉴 닫기" className="rounded-lg p-2 text-gray-500 hover:bg-gray-50 hover:text-gray-900">
                 <X className="h-5 w-5" />
@@ -220,7 +221,7 @@ export default function AppLayout() {
             <Menu className="h-5 w-5" />
           </button>
           <Link to="/" className="ml-2 flex min-w-0 items-center gap-2 font-semibold text-gray-900">
-            <BookOpen className="h-4 w-4 shrink-0" /><span className="truncate text-sm">사유의 서재</span>
+            <BrandLogo className="h-8 w-8" /><span className="truncate text-sm">사유의 서재</span>
           </Link>
         </header>
         <div className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
