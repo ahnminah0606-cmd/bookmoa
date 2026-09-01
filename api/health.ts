@@ -17,6 +17,20 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
     checks.jose = error instanceof Error ? error.message : 'failed';
   }
 
+  try {
+    await import('../server/openai');
+    checks.openaiModule = 'ok';
+  } catch (error) {
+    checks.openaiModule = error instanceof Error ? error.message : 'failed';
+  }
+
+  try {
+    await import('../server/auth');
+    checks.authModule = 'ok';
+  } catch (error) {
+    checks.authModule = error instanceof Error ? error.message : 'failed';
+  }
+
   checks.openaiKey = process.env.OPENAI_API_KEY ? 'configured' : 'missing';
   checks.firebaseProject = process.env.FIREBASE_PROJECT_ID ? 'configured' : 'missing';
   return res.status(200).json(checks);
