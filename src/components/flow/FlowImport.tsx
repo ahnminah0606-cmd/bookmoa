@@ -102,8 +102,8 @@ export default function FlowImport({ onSaved, assignment }: { history: ThoughtFl
       for (const { entry, month, id, previous } of targets) {
         const materials: FlowMaterial[] = previous.flatMap(item => item.materials || [{ id: item.id, authorNames: '작성자 미확인', sourceExcerpt: item.sourceExcerpt || item.summary, dateEvidence: item.dateEvidence || '', sourceNames: item.sourceNames || [], createdAt: item.createdAt }]);
         const materialId = `${importId}_${month}`;
-        if (materials.some(material => material.id === materialId)) continue;
-        materials.push({ id: materialId, authorNames: authorNames.trim(), sourceExcerpt: entry.sourceExcerpt, dateEvidence: entry.dateEvidence, sourceNames, createdAt });
+        // Re-uploading may refresh the summary without duplicating its source.
+        if (!materials.some(material => material.id === materialId)) materials.push({ id: materialId, authorNames: authorNames.trim(), sourceExcerpt: entry.sourceExcerpt, dateEvidence: entry.dateEvidence, sourceNames, createdAt });
         const startAt = eventStartAt(month);
         const record = {
           kind: 'import' as const, title: entry.title.trim(), summary: entry.summary,
