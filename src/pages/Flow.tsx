@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { collection, doc, getDocs, onSnapshot, setDoc, writeBatch } from 'firebase/firestore';
-import { ChevronLeft, ChevronRight, LoaderCircle, RotateCcw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LoaderCircle, ChevronDown } from 'lucide-react';
 import { auth, db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
 import type { ThoughtFlowCurrent, ThoughtFlowHistory } from '@/types';
 import FlowImport from '@/components/flow/FlowImport';
-import { sortFlowTimeline, formatEventDate } from '@/lib/flowTimeline';
+import { sortFlowTimeline, formatEventDate, latestThought } from '@/lib/flowTimeline';
 
 const PAGE_SIZE = 10;
 type FlowDecision = 'initialize' | 'update' | 'rewrite' | 'unchanged';
@@ -37,7 +37,7 @@ export default function Flow() {
   const { books } = useData();
   const [current, setCurrent] = useState<ThoughtFlowCurrent | null>(null);
   const [history, setHistory] = useState<ThoughtFlowHistory[]>([]);
-  const [selectedHistory, setSelectedHistory] = useState<ThoughtFlowHistory | null>(null);
+  const [openEntries, setOpenEntries] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
@@ -52,7 +52,7 @@ export default function Flow() {
   useEffect(() => {
     if (!spaceId) return;
     const currentRef = doc(db, 'spaces', spaceId, 'flow', 'current');
-    setCurrent(null); setHistory([]); setSelectedHistory(null); setPage(1);
+    setCurrent(null); setHistory([]); setOpenEntries(new Set()); setPage(1);
     const historyRef = collection(db, 'spaces', spaceId, 'flowHistory');
     const unsubscribeCurrent = onSnapshot(currentRef, (snapshot) => {
       setCurrent(snapshot.exists() ? snapshot.data() as ThoughtFlowCurrent : null);
@@ -71,7 +71,7 @@ export default function Flow() {
     const index = history.findIndex(item => item.id === pendingSelection);
     if (index < 0) return;
     setPage(Math.floor(index / PAGE_SIZE) + 1);
-    setSelectedHistory(history[index]);
+    setOpenEntries(new Set());
     setPendingSelection(null);
   }, [history, pendingSelection]);
 
@@ -169,9 +169,10 @@ export default function Flow() {
   const totalPages = Math.max(1, Math.ceil(history.length / PAGE_SIZE));
   const pageItems = history.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const slots = Array.from({ length: PAGE_SIZE }, (_, index) => pageItems[index] || null);
-  const displayed = selectedHistory
-    ? { summary: selectedHistory.summary, startAt: selectedHistory.startAt, endAt: selectedHistory.endAt }
-    : current ? { summary: current.summary, startAt: current.startAt, endAt: undefined } : null;
+  const displayed = latestThought(history, current);
+  const toggleEntry = (id: string) => setOpenEntries(previous => {
+    const next = new Set(previous); if (next.has(id)) next.delete(id); else next.add(id); return next;
+  });
 
   return (
     <div className="mx-auto max-w-4xl space-y-10 px-4 py-8 pb-24 md:px-8">
@@ -182,29 +183,10 @@ export default function Flow() {
         </p>
       </div>
 
-      <div key={spaceId || 'no-space'}><FlowImport onSaved={setPendingSelection} /></div>
+      <div key={spaceId || 'no-space'}><FlowImport history={history} onSaved={setPendingSelection} /></div>
 
       <section className="space-y-4">
-        <div className="flex min-h-6 items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-medium tracking-wide text-gray-400">{selectedHistory?.kind === 'import' ? selectedHistory.title : selectedHistory ? '전환점' : '현재'}</p>
-            {displayed && <p className="mt-1 text-xs tabular-nums text-gray-400">{selectedHistory?.eventDate ? formatEventDate(selectedHistory.eventDate) : formatPeriod(displayed.startAt, displayed.endAt)}</p>}
-          </div>
-          {selectedHistory && (
-            <button type="button" onClick={() => setSelectedHistory(null)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-900">
-              <RotateCcw className="h-3.5 w-3.5" />현재로 돌아가기
-            </button>
-          )}
-        </div>
-        {selectedHistory?.kind === 'import' && (
-          <details className="rounded-xl border border-gray-100 p-4 text-xs text-gray-500">
-            <summary className="cursor-pointer">자료 원문 · 날짜 근거</summary>
-            <p className="mt-3 leading-5">{selectedHistory.sourceNames?.join(' · ')}</p>
-            {selectedHistory.dateEvidence && <p className="mt-2 whitespace-pre-wrap leading-5">{selectedHistory.dateEvidence}</p>}
-            <p className="mt-3 whitespace-pre-wrap leading-6">{selectedHistory.sourceExcerpt}</p>
-          </details>
-        )}
-
+        <div className="space-y-1"><p className="text-xs font-medium text-gray-400">현재</p>{displayed && <p className="text-xs text-gray-400">{displayed.eventDate ? formatEventDate(displayed.eventDate) : formatDate(displayed.startAt)}</p>}</div>
         <div className="min-h-[250px] rounded-2xl border border-gray-100 bg-[#FAFAFA] p-6 sm:p-9">
           {displayed ? (
             <div className="space-y-5">
@@ -217,7 +199,7 @@ export default function Flow() {
               {isAnalyzing ? (
                 <><LoaderCircle className="mb-3 h-5 w-5 animate-spin text-gray-300" /><p className="text-sm text-gray-400">첫 생각의 흐름을 정리하고 있습니다.</p></>
               ) : (
-                <><p className="text-sm text-gray-500">아직 정리된 생각의 흐름이 없습니다.</p><p className="mt-2 text-xs font-light text-gray-400">책에서 떠오른 생각을 기록하면 이곳에 자연스럽게 채워집니다.</p></>
+                <><p className="text-sm text-gray-500">아직 정리된 생각이 없습니다.</p><p className="mt-2 text-xs font-light text-gray-400">자료를 추가하면 가장 최근 시기의 생각이 이곳에 정리됩니다.</p></>
               )}
             </div>
           )}
@@ -236,11 +218,18 @@ export default function Flow() {
           {slots.map((item, slotIndex) => {
             const number = (page - 1) * PAGE_SIZE + slotIndex + 1;
             return (
-              <button type="button" key={item?.id || `empty-${number}`} disabled={!item} onClick={() => item && setSelectedHistory(item)} className="flex h-11 w-full items-center border-b border-gray-100 px-4 text-left text-sm last:border-b-0 enabled:hover:bg-gray-50 disabled:cursor-default">
-                <span className="w-10 shrink-0 text-xs tabular-nums text-gray-400">{String(number).padStart(2, '0')}</span>
-                <span className={item ? 'min-w-0 text-gray-700' : 'text-gray-200'}>{item ? item.eventDate ? formatEventDate(item.eventDate) : formatPeriod(item.startAt, item.endAt) : '—'}</span>
-                {item?.title && <span className="ml-3 min-w-0 flex-1 truncate text-xs text-gray-400">{item.title}</span>}
-              </button>
+              <div key={item?.id || `empty-${number}`} className="border-b border-gray-100 last:border-b-0">
+                <button type="button" disabled={!item} aria-expanded={item ? openEntries.has(item.id) : undefined} aria-controls={item ? `thought-${item.id}` : undefined} onClick={() => item && toggleEntry(item.id)} className="flex min-h-12 w-full items-center gap-2 px-4 py-3 text-left text-sm enabled:hover:bg-gray-50 disabled:cursor-default">
+                  <span className="w-8 shrink-0 text-xs tabular-nums text-gray-400">{String(number).padStart(2, '0')}</span>
+                  <span className={item ? 'shrink-0 text-gray-700' : 'text-gray-200'}>{item ? item.eventDate ? formatEventDate(item.eventDate) : formatPeriod(item.startAt, item.endAt) : '—'}</span>
+                  {item?.title && <span className="min-w-0 flex-1 truncate text-xs text-gray-400">{item.title}</span>}
+                  {item && <ChevronDown className={`ml-auto h-4 w-4 shrink-0 text-gray-400 transition-transform ${openEntries.has(item.id) ? 'rotate-180' : ''}`} />}
+                </button>
+                {item && openEntries.has(item.id) && <div id={`thought-${item.id}`} className="space-y-4 border-t border-gray-100 bg-gray-50/50 px-5 py-5 sm:pl-14">
+                  {normalizeParagraphs(item.summary).map((paragraph, index) => <p key={index} className="whitespace-pre-wrap break-words text-sm leading-7 text-gray-800">{paragraph}</p>)}
+                  {!!(item.materials?.length || item.sourceExcerpt) && <details className="text-xs text-gray-500"><summary className="cursor-pointer">자료 원문 · 누구의 생각인지</summary>{(item.materials || [{ id: item.id, authorNames: '작성자 미확인', sourceExcerpt: item.sourceExcerpt || '', dateEvidence: item.dateEvidence || '', sourceNames: item.sourceNames || [], createdAt: item.createdAt }]).map(material => <div key={material.id} className="mt-3 space-y-2 border-t border-gray-100 pt-3"><p className="font-medium">{material.authorNames}</p><p>{material.sourceNames.join(' · ')}</p><p className="whitespace-pre-wrap">{material.dateEvidence}</p><p className="whitespace-pre-wrap leading-6">{material.sourceExcerpt}</p></div>)}</details>}
+                </div>}
+              </div>
             );
           })}
         </div>

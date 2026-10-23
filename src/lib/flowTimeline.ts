@@ -1,4 +1,4 @@
-import type { FlowImportDraft, ThoughtFlowHistory } from '../types';
+import type { FlowImportDraft, ThoughtFlowHistory, ThoughtFlowCurrent } from '../types';
 
 // Calendar dates are kept as date strings: upload times must never decide their position.
 export function isEventDate(value: unknown): value is string {
@@ -14,7 +14,7 @@ export function eventStartAt(value: string): string {
 }
 
 export function sortFlowTimeline(history: ThoughtFlowHistory[]): ThoughtFlowHistory[] {
-  return [...history].sort((a, b) => {
+  return history.filter(item => !item.mergedInto).sort((a, b) => {
     const time = (item: ThoughtFlowHistory) => {
       const date = item.eventDate && isEventDate(item.eventDate) ? eventStartAt(item.eventDate) : item.startAt || item.createdAt;
       const millis = Date.parse(date);
@@ -22,6 +22,29 @@ export function sortFlowTimeline(history: ThoughtFlowHistory[]): ThoughtFlowHist
     };
     return time(a) - time(b) || a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id);
   });
+}
+
+export function periodKey(date: string): string {
+  if (!isEventDate(date)) throw new Error('시기를 확인해 주세요.');
+  return date.slice(0, 7);
+}
+
+export function historyPeriod(item: ThoughtFlowHistory): string | null {
+  if (item.kind !== 'import' || item.mergedInto) return null;
+  return item.eventDate && isEventDate(item.eventDate) ? periodKey(item.eventDate) : null;
+}
+
+export function historyVersion(item?: ThoughtFlowHistory): string {
+  return item ? JSON.stringify([item.summary, item.thoughts || [], item.updatedAt || item.createdAt, item.mergedInto || '', item.materials?.map(material => material.id) || []]) : '';
+}
+
+export function latestThought(history: ThoughtFlowHistory[], current: ThoughtFlowCurrent | null): { summary: string; startAt: string; eventDate?: string } | null {
+  const latest = sortFlowTimeline(history).filter(item => item.summary.trim()).at(-1);
+  const currentDate = current?.analyzedThrough || current?.startAt;
+  if (current?.summary && (!latest || (currentDate && Date.parse(currentDate) > Date.parse(latest.startAt)))) {
+    return { summary: current.summary, startAt: currentDate || current.startAt };
+  }
+  return latest ? { summary: latest.summary, startAt: latest.startAt, eventDate: latest.eventDate } : null;
 }
 
 export function formatEventDate(value: string): string {

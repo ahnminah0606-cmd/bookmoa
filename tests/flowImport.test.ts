@@ -57,3 +57,29 @@ test('import API rejects non-POST and unsigned requests before AI analysis', asy
   const get = reply(); await handler({ method: 'GET', headers: {} } as any, get as any); assert.equal(get.statusCode, 405);
   const post = reply(); await handler({ method: 'POST', headers: {}, body: { text: 'test' } } as any, post as any); assert.equal(post.statusCode, 401);
 });
+
+test('monthly grouping unifies different days and hides merged originals without deleting them', async () => {
+  const { periodKey, historyPeriod, historyVersion } = await import('../src/lib/flowTimeline');
+  assert.equal(periodKey('2025-03-16'), periodKey('2025-03-28'));
+  const original = record('old', '2025-03-16', '2026-10-24');
+  const merged = { ...record('period_2025-03', '2025-03', '2026-10-24'), thoughts: [{ name: '성모', thought: '분류를 다시 생각했다.' }, { name: '민아', thought: '고정된 기준을 의심했다.' }] };
+  assert.equal(historyPeriod(original), '2025-03');
+  assert.equal(historyVersion(merged) === historyVersion({ ...merged, summary: '새로운 통합 내용' }), false);
+  assert.deepEqual(sortFlowTimeline([{ ...original, mergedInto: merged.id }, merged]).map(item => item.id), [merged.id]);
+});
+
+test('current shows newest material period, not latest upload date', async () => {
+  const { latestThought } = await import('../src/lib/flowTimeline');
+  const march = { ...record('march', '2026-03', '2026-10-01'), summary: '성모와 민아의 3월 생각' };
+  const old = { ...record('september', '2025-09', '2026-10-24'), summary: '나중에 올린 과거 생각' };
+  assert.equal(latestThought([march, old], null)?.summary, march.summary);
+  assert.equal(latestThought([march, { ...old, updatedAt: '2026-11-01' }], null)?.summary, march.summary);
+  assert.equal(latestThought([], null), null);
+});
+
+test('person names and their thoughts remain separate in structured results', () => {
+  const thoughts = [{ name: '성모', thought: '분류 기준을 의심했다.' }, { name: '민아', thought: '관점에 따라 이름이 달라진다고 보았다.' }];
+  assert.deepEqual(parseImportResult({ entries: [{ ...draft, thoughts }] })[0].thoughts, thoughts);
+  assert.throws(() => parseImportResult({ entries: [{ ...draft, thoughts: [{ name: '', thought: '주인이 없는 주장' }] }] }));
+  assert.equal(validateFlowImport({ text: '2025년 3월', authorNames: '성모, 민아', existingEntries: [{ eventDate: '2025-03', summary: '기존 내용', thoughts }] }).authorNames, '성모, 민아');
+});

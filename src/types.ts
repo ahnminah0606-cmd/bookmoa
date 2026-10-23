@@ -98,7 +98,14 @@ export type ThoughtFlowHistory = {
   sourceExcerpt?: string;
   sourceNames?: string[];
   importedBy?: string;
+  updatedAt?: string;
+  mergedInto?: string;
+  thoughts?: PersonThought[];
+  materials?: FlowMaterial[];
 };
+
+export type PersonThought = { name: string; thought: string };
+export type FlowMaterial = { id: string; authorNames: string; sourceExcerpt: string; dateEvidence: string; sourceNames: string[]; createdAt: string };
 
 export type FlowImportDraft = {
   title: string;
@@ -106,4 +113,5 @@ export type FlowImportDraft = {
   eventDate: string | null;
   dateEvidence: string;
   sourceExcerpt: string;
+  thoughts?: PersonThought[];
 };
