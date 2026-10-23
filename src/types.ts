@@ -16,6 +16,19 @@ export type Space = {
 
 export type BookStatus = 'reading' | 'completed' | 'planned';
 
+export type BookQuote = {
+  text: string;
+  sourceUrl: string;
+  sourceTitle: string;
+};
+
+export type BookQuoteLookup = {
+  key: string;
+  status: 'ready' | 'not_found' | 'error';
+  quotes: BookQuote[];
+  checkedAt: string;
+};
+
 export type Book = {
   id: string;
   spaceId: string;
@@ -35,6 +48,7 @@ export type Book = {
   startedAt?: string;
   completedAt?: string;
   deletedAt?: string;
+  quoteLookup?: BookQuoteLookup | null;
 };
 
 export type DiscussionRecord = {

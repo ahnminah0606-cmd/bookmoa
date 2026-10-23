@@ -4,11 +4,35 @@ import path from 'path';
 import {defineConfig, loadEnv, type Plugin} from 'vite';
 import { createDiscussionSummary, toPublicOpenAIError } from './server/openai';
 import { verifyFirebaseToken } from './server/auth';
+import { findBookQuotes, quoteError } from './server/bookQuotes';
 
-function localApiPlugin(apiKey: string | undefined, model: string | undefined, projectId: string | undefined): Plugin {
+function localApiPlugin(apiKey: string | undefined, model: string | undefined, projectId: string | undefined, quoteModel?: string): Plugin {
   return {
     name: 'bookmoa-local-api',
     configureServer(server) {
+      server.middlewares.use('/api/quotes', (req, res) => {
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-store');
+        if (req.method !== 'POST') {
+          res.statusCode = 405;
+          res.setHeader('Allow', 'POST');
+          res.end(JSON.stringify({ error: 'Method not allowed' }));
+          return;
+        }
+        let body = '';
+        req.on('data', chunk => { body += chunk; if (body.length > 2000) req.destroy(); });
+        req.on('end', async () => {
+          try {
+            await verifyFirebaseToken(req.headers.authorization, projectId);
+            const quotes = await findBookQuotes(JSON.parse(body || '{}'), { apiKey, model: quoteModel });
+            res.end(JSON.stringify({ quotes }));
+          } catch (error) {
+            const failure = quoteError(error);
+            res.statusCode = failure.status;
+            res.end(JSON.stringify({ error: failure.error }));
+          }
+        });
+      });
       server.middlewares.use('/api/summarize', (req, res) => {
         if (req.method !== 'POST') {
           res.statusCode = 405;
@@ -51,7 +75,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       tailwindcss(),
-      localApiPlugin(env.OPENAI_API_KEY, env.OPENAI_MODEL, env.FIREBASE_PROJECT_ID || env.VITE_FIREBASE_PROJECT_ID),
+      localApiPlugin(env.OPENAI_API_KEY, env.OPENAI_MODEL, env.FIREBASE_PROJECT_ID || env.VITE_FIREBASE_PROJECT_ID, env.OPENAI_QUOTE_MODEL),
     ],
     resolve: {
       alias: {
