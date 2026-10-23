@@ -180,7 +180,7 @@ export default function Flow() {
       <div className="space-y-4 border-b border-gray-100/60 pb-10">
         <h1 className="text-2xl font-medium tracking-tight text-gray-900 md:text-3xl">생각의 흐름</h1>
         <p className="text-[15px] font-light leading-relaxed text-gray-400">
-          기록이 쌓이면 두 사람의 시선이 더해지고 달라진 과정을 AI가 조용히 정리합니다.
+          무엇을 의심하고, 무엇을 중요하게 여기는지. 두 사람의 생각이 이어지고 달라지는 과정을 모읍니다.
         </p>
       </div>
 
@@ -228,6 +228,7 @@ export default function Flow() {
                 </button>
                 {item && openEntries.has(item.id) && <div id={`thought-${item.id}`} className="space-y-4 border-t border-gray-100 bg-gray-50/50 px-5 py-5 sm:pl-14">
                   {item.kind === 'import' && !item.thoughts?.length && <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500"><span>누구의 글인지 선택해 다시 정리할 수 있어요.</span>{['민아', '성모'].map(name => <button type="button" key={name} onClick={() => setAssignment({ item, name, requestId: crypto.randomUUID() })} className="rounded-full border border-gray-200 bg-white px-3 py-1.5">{name}의 글</button>)}</div>}
+                  {item.kind === 'import' && item.thoughts?.some(person => ['민아', '성모'].includes(person.name)) && <button type="button" onClick={() => setAssignment({ item, name: item.thoughts!.map(person => person.name).filter(name => ['민아', '성모'].includes(name)).join(', '), requestId: crypto.randomUUID() })} className="text-xs text-gray-400 underline underline-offset-4">생각 중심으로 다시 정리</button>}
                   {normalizeParagraphs(item.summary).map((paragraph, index) => <p key={index} className="whitespace-pre-wrap break-words text-sm leading-7 text-gray-800">{paragraph}</p>)}
                   <p className="text-right text-xs tabular-nums text-gray-400">{compactPeriod(item.eventDate || item.startAt, item.endAt)}</p>
                 </div>}
