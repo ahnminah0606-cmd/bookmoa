@@ -1,9 +1,10 @@
 import { useRef, useState, useEffect } from 'react';
-import { doc, runTransaction } from 'firebase/firestore';
+import { collection, doc, getDocsFromServer, runTransaction } from 'firebase/firestore';
 import { ImagePlus, LoaderCircle, Upload, X, Check } from 'lucide-react';
 import { auth, db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { eventStartAt, formatEventDate, validateImportDrafts, periodKey, historyPeriod, historyVersion } from '@/lib/flowTimeline';
+import { FlowConflictError, retryFlowIntegration } from '@/lib/flowIntegration';
 import type { FlowImportDraft, ThoughtFlowHistory, FlowMaterial } from '@/types';
 
 type ImageAttachment = { id: string; name: string; dataUrl: string };
@@ -28,7 +29,7 @@ async function prepareImage(file: File): Promise<string> {
   } finally { bitmap.close(); }
 }
 
-export default function FlowImport({ history, onSaved, assignment }: { history: ThoughtFlowHistory[]; onSaved: (id: string) => void; assignment?: { item: ThoughtFlowHistory; name: string; requestId: string } | null }) {
+export default function FlowImport({ onSaved, assignment }: { history: ThoughtFlowHistory[]; onSaved: (id: string) => void; assignment?: { item: ThoughtFlowHistory; name: string; requestId: string } | null }) {
   const { spaceId, user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [text, setText] = useState('');
@@ -96,7 +97,7 @@ export default function FlowImport({ history, onSaved, assignment }: { history: 
       const snapshots = await Promise.all(ids.map(id => transaction.get(doc(db, 'spaces', spaceId!, 'flowHistory', id))));
       const live = new Map(snapshots.map((snap, index) => [ids[index], snap.exists() ? { ...snap.data(), id: ids[index] } as ThoughtFlowHistory : undefined]));
       for (const id of ids) {
-        if (historyVersion(live.get(id)) !== historyVersion(context.find(item => item.id === id))) throw new Error('다른 자료가 먼저 반영됐어요. 다시 정리하면 최신 내용에 합쳐집니다.');
+        if (historyVersion(live.get(id)) !== historyVersion(context.find(item => item.id === id))) throw new FlowConflictError();
       }
       for (const { entry, month, id, previous } of targets) {
         const materials: FlowMaterial[] = previous.flatMap(item => item.materials || [{ id: item.id, authorNames: '작성자 미확인', sourceExcerpt: item.sourceExcerpt || item.summary, dateEvidence: item.dateEvidence || '', sourceNames: item.sourceNames || [], createdAt: item.createdAt }]);
@@ -127,29 +128,34 @@ export default function FlowImport({ history, onSaved, assignment }: { history: 
       try { validateImportDrafts(drafts); } catch (cause) { setError((cause as Error).message); return; }
     }
     operationRunning.current = true; setBusy('analyzing'); setError(''); setSuccess('');
-    const context = history.filter(item => !item.mergedInto);
     try {
       const token = await auth.currentUser?.getIdToken();
       if (!token) throw new Error('로그인이 필요합니다.');
       const hints = confirmedDates && drafts ? `사용자가 확인한 시기: ${JSON.stringify(drafts.map(entry => ({ eventDate: entry.eventDate, sourceExcerpt: entry.sourceExcerpt })))}` : '';
-      const response = await fetch('/api/flow-import', {
-        method: 'POST', signal: AbortSignal.timeout(60_000),
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ text: [hints, text].filter(Boolean).join('\n\n'), images: images.map(image => image.dataUrl), authorNames,
-          existingEntries: context.filter(item => historyPeriod(item)).map(item => ({ eventDate: item.eventDate, summary: item.summary, thoughts: item.thoughts || [] })),
-        }),
-      });
-      const result = await response.json();
-      if (!response.ok || !Array.isArray(result.entries)) throw new Error(result.error || '자료를 정리하지 못했습니다.');
-      if (!result.entries.length) throw new Error('읽을 수 있는 생각 기록을 찾지 못했어요. 글자가 잘 보이는 자료를 올려 주세요.');
-      if (result.entries.some((entry: FlowImportDraft) => !entry.eventDate)) {
-        setDrafts(result.entries.map((entry: FlowImportDraft) => ({ ...entry, id: crypto.randomUUID() })));
-        return;
-      }
       const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify([authorNames.trim(), text, images.map(image => image.dataUrl)])));
       batchIdentity.current = { id: Array.from(new Uint8Array(digest)).map(byte => byte.toString(16).padStart(2, '0')).join(''), createdAt: new Date().toISOString() };
-      setBusy('saving');
-      const id = await saveEntries(result.entries, context);
+      const id = await retryFlowIntegration(async () => {
+        setBusy('analyzing');
+        const snapshot = await getDocsFromServer(collection(db, 'spaces', spaceId, 'flowHistory'));
+        const context = snapshot.docs.map(item => ({ ...item.data(), id: item.id } as ThoughtFlowHistory)).filter(item => !item.mergedInto);
+        const response = await fetch('/api/flow-import', {
+          method: 'POST', signal: AbortSignal.timeout(60_000),
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ text: [hints, text].filter(Boolean).join('\n\n'), images: images.map(image => image.dataUrl), authorNames,
+            existingEntries: context.filter(item => historyPeriod(item)).map(item => ({ eventDate: item.eventDate, summary: item.summary, thoughts: item.thoughts || [] })),
+          }),
+        });
+        const result = await response.json();
+        if (!response.ok || !Array.isArray(result.entries)) throw new Error(result.error || '자료를 정리하지 못했습니다.');
+        if (!result.entries.length) throw new Error('읽을 수 있는 생각 기록을 찾지 못했어요. 글자가 잘 보이는 자료를 올려 주세요.');
+        if (result.entries.some((entry: FlowImportDraft) => !entry.eventDate)) {
+          setDrafts(result.entries.map((entry: FlowImportDraft) => ({ ...entry, id: crypto.randomUUID() })));
+          return;
+        }
+        setBusy('saving');
+        return saveEntries(result.entries, context);
+      });
+      if (!id) return;
       setSuccess('자료 속 시기에 맞춰 사람별 생각을 정리했어요. 같은 시기의 기록은 함께 업데이트했습니다.');
       setDrafts(null); setText(''); setImages([]); setTextSources([]); setIsOpen(false);
       onSaved(id);
