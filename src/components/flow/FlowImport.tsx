@@ -142,7 +142,7 @@ export default function FlowImport({ onSaved, assignment }: { history: ThoughtFl
           method: 'POST', signal: AbortSignal.timeout(60_000),
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ text: [hints, text].filter(Boolean).join('\n\n'), images: images.map(image => image.dataUrl), authorNames,
-            existingEntries: context.filter(item => historyPeriod(item)).map(item => ({ eventDate: item.eventDate, summary: item.summary, thoughts: item.thoughts || [] })),
+            existingEntries: context.filter(item => historyPeriod(item)).map(item => ({ eventDate: item.eventDate, summary: item.summary, thoughts: item.thoughts || [], sourceExcerpt: item.sourceExcerpt || '', materials: (item.materials || []).map(material => ({ authorNames: material.authorNames, sourceExcerpt: material.sourceExcerpt })) })),
           }),
         });
         const result = await response.json();
