@@ -228,7 +228,6 @@ export default function Flow() {
                 </button>
                 {item && openEntries.has(item.id) && <div id={`thought-${item.id}`} className="space-y-4 border-t border-gray-100 bg-gray-50/50 px-5 py-5 sm:pl-14">
                   {item.kind === 'import' && !item.thoughts?.length && <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500"><span>누구의 글인지 선택해 다시 정리할 수 있어요.</span>{['민아', '성모'].map(name => <button type="button" key={name} onClick={() => setAssignment({ item, name, requestId: crypto.randomUUID() })} className="rounded-full border border-gray-200 bg-white px-3 py-1.5">{name}의 글</button>)}</div>}
-                  {item.kind === 'import' && item.thoughts?.some(person => ['민아', '성모'].includes(person.name)) && <button type="button" onClick={() => setAssignment({ item, name: item.thoughts!.map(person => person.name).filter(name => ['민아', '성모'].includes(name)).join(', '), requestId: crypto.randomUUID() })} className="text-xs text-gray-400 underline underline-offset-4">생각 중심으로 다시 정리</button>}
                   {normalizeParagraphs(item.summary).map((paragraph, index) => <p key={index} className="whitespace-pre-wrap break-words text-sm leading-7 text-gray-800">{paragraph}</p>)}
                   <p className="text-right text-xs tabular-nums text-gray-400">{compactPeriod(item.eventDate || item.startAt, item.endAt)}</p>
                 </div>}
