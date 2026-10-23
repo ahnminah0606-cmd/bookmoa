@@ -46,13 +46,22 @@ export function timelineTitle(item: ThoughtFlowHistory): string {
   return singleLine.length > 32 ? `${singleLine.slice(0, 31).trim()}…` : singleLine;
 }
 
-export function latestThought(history: ThoughtFlowHistory[], current: ThoughtFlowCurrent | null): { summary: string; startAt: string; eventDate?: string } | null {
+export function latestThought(history: ThoughtFlowHistory[], current: ThoughtFlowCurrent | null): { summary: string; startAt: string; eventDate?: string; endAt?: string } | null {
   const latest = sortFlowTimeline(history).filter(item => item.summary.trim()).at(-1);
   const currentDate = current?.analyzedThrough || current?.startAt;
   if (current?.summary && (!latest || (currentDate && Date.parse(currentDate) > Date.parse(latest.startAt)))) {
     return { summary: current.summary, startAt: currentDate || current.startAt };
   }
-  return latest ? { summary: latest.summary, startAt: latest.startAt, eventDate: latest.eventDate } : null;
+  return latest ? { summary: latest.summary, startAt: latest.startAt, eventDate: latest.eventDate, endAt: latest.endAt } : null;
+}
+
+export function compactPeriod(start?: string, end?: string): string {
+  const month = (value?: string) => {
+    const match = /^(\d{4})-(0[1-9]|1[0-2])/.exec(value || '');
+    return match ? `${match[1].slice(-2)}.${match[2]}` : '';
+  };
+  const first = month(start), last = month(end);
+  return first && last && first !== last ? `${first}~${last}` : first || last;
 }
 
 export function formatEventDate(value: string): string {

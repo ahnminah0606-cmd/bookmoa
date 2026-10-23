@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
 import type { ThoughtFlowCurrent, ThoughtFlowHistory } from '@/types';
 import FlowImport from '@/components/flow/FlowImport';
-import { sortFlowTimeline, formatEventDate, latestThought, timelineTitle } from '@/lib/flowTimeline';
+import { sortFlowTimeline, formatEventDate, latestThought, timelineTitle, compactPeriod } from '@/lib/flowTimeline';
 
 const PAGE_SIZE = 10;
 type FlowDecision = 'initialize' | 'update' | 'rewrite' | 'unchanged';
@@ -186,13 +186,14 @@ export default function Flow() {
       <div key={spaceId || 'no-space'}><FlowImport history={history} onSaved={setPendingSelection} /></div>
 
       <section className="space-y-4">
-        <div className="space-y-1"><p className="text-xs font-medium text-gray-400">현재</p>{displayed && <p className="text-xs text-gray-400">{displayed.eventDate ? formatEventDate(displayed.eventDate) : formatDate(displayed.startAt)}</p>}</div>
+        <p className="text-xs font-medium text-gray-400">현재</p>
         <div className="min-h-[250px] rounded-2xl border border-gray-100 bg-[#FAFAFA] p-6 sm:p-9">
           {displayed ? (
             <div className="space-y-5">
               {normalizeParagraphs(displayed.summary).map((paragraph, index) => (
                 <p key={index} className="break-keep text-[15px] font-light leading-8 text-gray-800">{paragraph}</p>
               ))}
+              <p className="text-right text-xs tabular-nums text-gray-400">{compactPeriod(displayed.eventDate || displayed.startAt, displayed.endAt)}</p>
             </div>
           ) : (
             <div className="flex min-h-[176px] flex-col items-center justify-center text-center">
@@ -225,9 +226,8 @@ export default function Flow() {
                   {item && <ChevronDown className={`ml-auto h-4 w-4 shrink-0 text-gray-400 transition-transform ${openEntries.has(item.id) ? 'rotate-180' : ''}`} />}
                 </button>
                 {item && openEntries.has(item.id) && <div id={`thought-${item.id}`} className="space-y-4 border-t border-gray-100 bg-gray-50/50 px-5 py-5 sm:pl-14">
-                  <p className="text-xs text-gray-400">{item.eventDate ? formatEventDate(item.eventDate) : formatPeriod(item.startAt, item.endAt)}</p>
                   {normalizeParagraphs(item.summary).map((paragraph, index) => <p key={index} className="whitespace-pre-wrap break-words text-sm leading-7 text-gray-800">{paragraph}</p>)}
-                  {!!(item.materials?.length || item.sourceExcerpt) && <details className="text-xs text-gray-500"><summary className="cursor-pointer">자료 원문 · 누구의 생각인지</summary>{(item.materials || [{ id: item.id, authorNames: '작성자 미확인', sourceExcerpt: item.sourceExcerpt || '', dateEvidence: item.dateEvidence || '', sourceNames: item.sourceNames || [], createdAt: item.createdAt }]).map(material => <div key={material.id} className="mt-3 space-y-2 border-t border-gray-100 pt-3"><p className="font-medium">{material.authorNames}</p><p>{material.sourceNames.join(' · ')}</p><p className="whitespace-pre-wrap">{material.dateEvidence}</p><p className="whitespace-pre-wrap leading-6">{material.sourceExcerpt}</p></div>)}</details>}
+                  <p className="text-right text-xs tabular-nums text-gray-400">{compactPeriod(item.eventDate || item.startAt, item.endAt)}</p>
                 </div>}
               </div>
             );
