@@ -79,10 +79,10 @@ export default function AppLayout() {
       {/* Desktop sidebar */}
       <aside className={cn('relative hidden shrink-0 flex-col justify-between border-r border-gray-100 bg-white transition-[width] duration-200 md:flex', isSidebarCollapsed ? 'w-[72px]' : 'w-64')}>
         <div>
-          <div className={cn('flex h-20 items-center', isSidebarCollapsed ? 'justify-center px-3' : 'px-6')}>
-            <Link to="/" aria-label="사유의 서재 홈" className="flex items-center gap-3 font-semibold text-gray-900">
+          <div className={cn('flex h-20 items-center', isSidebarCollapsed ? 'justify-center px-1' : 'px-6')}>
+            <Link to="/" aria-label="BOOKMOA 홈" className={cn('flex items-center gap-2.5 font-bold text-gray-900', isSidebarCollapsed && 'flex-col gap-0.5')}>
               <BrandLogo className="h-10 w-10" />
-              {!isSidebarCollapsed && <span className="whitespace-nowrap">사유의 서재</span>}
+              <span className={isSidebarCollapsed ? "text-[9px] tracking-wide" : "whitespace-nowrap text-lg tracking-[0.06em]"}>BOOKMOA</span>
             </Link>
           </div>
           <nav className="flex flex-col gap-1 px-3 mt-2">
@@ -206,7 +206,7 @@ export default function AppLayout() {
       <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-white">
         <header className="flex h-16 shrink-0 items-center justify-between border-b border-gray-100 px-4 md:hidden">
           <Link to="/" className="flex min-w-0 items-center gap-2 font-semibold text-gray-900">
-            <BrandLogo className="h-9 w-9" /><span className="truncate text-sm">사유의 서재</span>
+            <BrandLogo className="h-9 w-9" /><span className="whitespace-nowrap text-base font-bold tracking-[0.06em]">BOOKMOA</span>
           </Link>
           <button type="button" onClick={() => setIsMobileMoreOpen(true)} aria-label="계정 메뉴 열기" className="flex h-10 w-10 items-center justify-center rounded-full transition-colors active:bg-gray-50">
             {user?.photoURL ? (
@@ -245,7 +245,7 @@ export default function AppLayout() {
               ) : (
                 <span className="flex h-11 w-11 items-center justify-center rounded-full bg-purple-600 text-sm font-medium text-white">{user?.nickname ? user.nickname.charAt(0) : 'U'}</span>
               )}
-              <div className="min-w-0"><p className="truncate text-sm font-medium text-gray-900">{user?.nickname || '사용자 1'}</p><p className="mt-0.5 truncate text-xs text-gray-400">{user?.email || '사유의 서재'}</p></div>
+              <div className="min-w-0"><p className="truncate text-sm font-medium text-gray-900">{user?.nickname || '사용자 1'}</p><p className="mt-0.5 truncate text-xs text-gray-400">{user?.email || 'BOOKMOA'}</p></div>
             </div>
             <div className="space-y-1">
               <button type="button" onClick={() => { setIsMobileMoreOpen(false); setIsInviteModalOpen(true); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-sm text-gray-700 hover:bg-gray-50"><UserPlus className="h-4 w-4 text-gray-400" /><span className="flex-1">파트너 초대</span><span className="max-w-28 truncate font-mono text-[10px] text-gray-400">{inviteCode}</span></button>

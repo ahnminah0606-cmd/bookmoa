@@ -91,4 +91,19 @@ export type ThoughtFlowHistory = {
   startAt: string;
   endAt: string;
   createdAt: string;
+  kind?: 'import';
+  title?: string;
+  eventDate?: string;
+  dateEvidence?: string;
+  sourceExcerpt?: string;
+  sourceNames?: string[];
+  importedBy?: string;
+};
+
+export type FlowImportDraft = {
+  title: string;
+  summary: string;
+  eventDate: string | null;
+  dateEvidence: string;
+  sourceExcerpt: string;
 };

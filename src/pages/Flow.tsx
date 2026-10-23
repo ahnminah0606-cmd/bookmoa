@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { collection, doc, getDocs, onSnapshot, orderBy, query, setDoc, writeBatch } from 'firebase/firestore';
+import { collection, doc, getDocs, onSnapshot, setDoc, writeBatch } from 'firebase/firestore';
 import { ChevronLeft, ChevronRight, LoaderCircle, RotateCcw } from 'lucide-react';
 import { auth, db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
 import type { ThoughtFlowCurrent, ThoughtFlowHistory } from '@/types';
+import FlowImport from '@/components/flow/FlowImport';
+import { sortFlowTimeline, formatEventDate } from '@/lib/flowTimeline';
 
 const PAGE_SIZE = 10;
 type FlowDecision = 'initialize' | 'update' | 'rewrite' | 'unchanged';
@@ -40,6 +42,7 @@ export default function Flow() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const analysisKeyRef = useRef('');
+  const [pendingSelection, setPendingSelection] = useState<string | null>(null);
 
   const memberNames = useMemo(() => [
     user?.nickname || user?.displayName || '나',
@@ -49,18 +52,28 @@ export default function Flow() {
   useEffect(() => {
     if (!spaceId) return;
     const currentRef = doc(db, 'spaces', spaceId, 'flow', 'current');
-    const historyRef = query(collection(db, 'spaces', spaceId, 'flowHistory'), orderBy('createdAt', 'asc'));
+    setCurrent(null); setHistory([]); setSelectedHistory(null); setPage(1);
+    const historyRef = collection(db, 'spaces', spaceId, 'flowHistory');
     const unsubscribeCurrent = onSnapshot(currentRef, (snapshot) => {
       setCurrent(snapshot.exists() ? snapshot.data() as ThoughtFlowCurrent : null);
     });
     const unsubscribeHistory = onSnapshot(historyRef, (snapshot) => {
-      setHistory(snapshot.docs.map((item) => ({ id: item.id, ...item.data() })) as ThoughtFlowHistory[]);
+      setHistory(sortFlowTimeline(snapshot.docs.map((item) => ({ ...item.data(), id: item.id })) as ThoughtFlowHistory[]));
     });
     return () => {
       unsubscribeCurrent();
       unsubscribeHistory();
     };
   }, [spaceId]);
+
+  useEffect(() => {
+    if (!pendingSelection) return;
+    const index = history.findIndex(item => item.id === pendingSelection);
+    if (index < 0) return;
+    setPage(Math.floor(index / PAGE_SIZE) + 1);
+    setSelectedHistory(history[index]);
+    setPendingSelection(null);
+  }, [history, pendingSelection]);
 
   useEffect(() => {
     if (!spaceId || isAnalyzing) return;
@@ -169,11 +182,13 @@ export default function Flow() {
         </p>
       </div>
 
+      <div key={spaceId || 'no-space'}><FlowImport onSaved={setPendingSelection} /></div>
+
       <section className="space-y-4">
         <div className="flex min-h-6 items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-medium tracking-wide text-gray-400">{selectedHistory ? '지난 생각의 흐름' : '현재 생각의 흐름'}</p>
-            {displayed && <p className="mt-1 text-xs tabular-nums text-gray-400">{formatPeriod(displayed.startAt, displayed.endAt)}</p>}
+            <p className="text-xs font-medium tracking-wide text-gray-400">{selectedHistory?.kind === 'import' ? selectedHistory.title : selectedHistory ? '전환점' : '현재'}</p>
+            {displayed && <p className="mt-1 text-xs tabular-nums text-gray-400">{selectedHistory?.eventDate ? formatEventDate(selectedHistory.eventDate) : formatPeriod(displayed.startAt, displayed.endAt)}</p>}
           </div>
           {selectedHistory && (
             <button type="button" onClick={() => setSelectedHistory(null)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-900">
@@ -181,6 +196,14 @@ export default function Flow() {
             </button>
           )}
         </div>
+        {selectedHistory?.kind === 'import' && (
+          <details className="rounded-xl border border-gray-100 p-4 text-xs text-gray-500">
+            <summary className="cursor-pointer">자료 원문 · 날짜 근거</summary>
+            <p className="mt-3 leading-5">{selectedHistory.sourceNames?.join(' · ')}</p>
+            {selectedHistory.dateEvidence && <p className="mt-2 whitespace-pre-wrap leading-5">{selectedHistory.dateEvidence}</p>}
+            <p className="mt-3 whitespace-pre-wrap leading-6">{selectedHistory.sourceExcerpt}</p>
+          </details>
+        )}
 
         <div className="min-h-[250px] rounded-2xl border border-gray-100 bg-[#FAFAFA] p-6 sm:p-9">
           {displayed ? (
@@ -205,7 +228,7 @@ export default function Flow() {
 
       <section className="space-y-4 border-t border-gray-100/60 pt-8">
         <div className="flex items-end justify-between gap-4">
-          <div><h2 className="text-sm font-medium text-gray-700">지난 생각의 흐름</h2><p className="mt-1 text-xs font-light text-gray-400">생각의 중심이 크게 달라졌던 순간만 보관됩니다.</p></div>
+          <div><h2 className="text-sm font-medium text-gray-700">전환점</h2><p className="mt-1 text-xs font-light leading-5 text-gray-400">자료 속 시기와 생각의 변화 순으로 모았어요. 뒤늦게 추가한 기록도 제자리를 찾아갑니다.</p></div>
           <span className="text-xs tabular-nums text-gray-400">{history.length}개의 기록</span>
         </div>
 
@@ -215,14 +238,15 @@ export default function Flow() {
             return (
               <button type="button" key={item?.id || `empty-${number}`} disabled={!item} onClick={() => item && setSelectedHistory(item)} className="flex h-11 w-full items-center border-b border-gray-100 px-4 text-left text-sm last:border-b-0 enabled:hover:bg-gray-50 disabled:cursor-default">
                 <span className="w-10 shrink-0 text-xs tabular-nums text-gray-400">{String(number).padStart(2, '0')}</span>
-                <span className={item ? 'text-gray-700' : 'text-gray-200'}>{item ? formatPeriod(item.startAt, item.endAt) : '—'}</span>
+                <span className={item ? 'min-w-0 text-gray-700' : 'text-gray-200'}>{item ? item.eventDate ? formatEventDate(item.eventDate) : formatPeriod(item.startAt, item.endAt) : '—'}</span>
+                {item?.title && <span className="ml-3 min-w-0 flex-1 truncate text-xs text-gray-400">{item.title}</span>}
               </button>
             );
           })}
         </div>
 
         {totalPages > 1 && (
-          <nav aria-label="지난 생각의 흐름 페이지" className="flex items-center justify-center gap-1 pt-2">
+          <nav aria-label="전환점 페이지" className="flex items-center justify-center gap-1 pt-2">
             <button type="button" disabled={page === 1} onClick={() => setPage((value) => value - 1)} className="rounded-md p-2 text-gray-400 hover:bg-gray-50 disabled:text-gray-200"><ChevronLeft className="h-4 w-4" /></button>
             {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
               <button type="button" key={pageNumber} onClick={() => setPage(pageNumber)} className={`h-8 min-w-8 rounded-md px-2 text-xs ${page === pageNumber ? 'bg-gray-900 text-white' : 'text-gray-500 hover:bg-gray-50'}`}>{pageNumber}</button>
