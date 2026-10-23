@@ -43,6 +43,7 @@ export default function Flow() {
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const analysisKeyRef = useRef('');
   const [pendingSelection, setPendingSelection] = useState<string | null>(null);
+  const [assignment, setAssignment] = useState<{ item: ThoughtFlowHistory; name: string; requestId: string } | null>(null);
 
   const memberNames = useMemo(() => [
     user?.nickname || user?.displayName || '나',
@@ -183,7 +184,7 @@ export default function Flow() {
         </p>
       </div>
 
-      <div key={spaceId || 'no-space'}><FlowImport history={history} onSaved={setPendingSelection} /></div>
+      <div key={spaceId || 'no-space'}><FlowImport history={history} onSaved={setPendingSelection} assignment={assignment} /></div>
 
       <section className="space-y-4">
         <p className="text-xs font-medium text-gray-400">현재</p>
@@ -226,6 +227,7 @@ export default function Flow() {
                   {item && <ChevronDown className={`ml-auto h-4 w-4 shrink-0 text-gray-400 transition-transform ${openEntries.has(item.id) ? 'rotate-180' : ''}`} />}
                 </button>
                 {item && openEntries.has(item.id) && <div id={`thought-${item.id}`} className="space-y-4 border-t border-gray-100 bg-gray-50/50 px-5 py-5 sm:pl-14">
+                  {item.kind === 'import' && !item.thoughts?.length && <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500"><span>누구의 글인지 선택해 다시 정리할 수 있어요.</span>{['민아', '성모'].map(name => <button type="button" key={name} onClick={() => setAssignment({ item, name, requestId: crypto.randomUUID() })} className="rounded-full border border-gray-200 bg-white px-3 py-1.5">{name}의 글</button>)}</div>}
                   {normalizeParagraphs(item.summary).map((paragraph, index) => <p key={index} className="whitespace-pre-wrap break-words text-sm leading-7 text-gray-800">{paragraph}</p>)}
                   <p className="text-right text-xs tabular-nums text-gray-400">{compactPeriod(item.eventDate || item.startAt, item.endAt)}</p>
                 </div>}

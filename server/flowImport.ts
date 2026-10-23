@@ -44,6 +44,7 @@ export function parseImportResult(value: unknown): FlowImportDraft[] {
     const thoughts = Array.isArray(entry.thoughts) ? entry.thoughts : [];
     if (thoughts.length > 20 || thoughts.some(person => typeof person.name !== 'string' || !person.name.trim() || person.name.length > 100 || typeof person.thought !== 'string' || !person.thought.trim() || person.thought.length > 2000)) throw new Error('INVALID_IMPORT_RESULT');
     return {
+      currentSummary: typeof entry.currentSummary === 'string' ? entry.currentSummary.trim().slice(0, 700) : undefined,
       thoughts: thoughts.map(person => ({ name: person.name.trim(), thought: person.thought.trim() })),
       title: entry.title.trim(), summary: thoughts.length ? thoughts.map(person => `${person.name}: ${person.thought.trim()}`).join('\n\n') : entry.summary.trim(), sourceExcerpt: entry.sourceExcerpt.trim(),
       dateEvidence: entry.dateEvidence.trim(), eventDate: isEventDate(entry.eventDate) ? entry.eventDate : null,
@@ -69,6 +70,8 @@ export async function analyzeFlowImport(input: { text?: unknown; images?: unknow
       '각 entry에 thoughts:[{name,thought}]를 반드시 넣는다. thought에는 이름을 반복하지 않고 그 사람의 관점을 …라고 생각했다 / …라고 보았다 형태로 서술한다. summary는 성모는 …라고 생각했고, 민아는 …라고 보았다 같은 이름 중심 서술로 쓴다. 제시되지 않은 사람의 생각을 만들지 않는다.',
       '같은 연도와 월의 새 자료는 한 entry로 묶고 eventDate는 YYYY-MM로 반환한다. 기존 기록 중 같은 월이 있으면 기존 사람별 생각과 새 자료를 통합한 전체 summary와 thoughts를 반환한다. 다른 월의 내용은 바꾸지 않는다.',
       '같은 사람의 관점이 달라졌으면 기존 생각을 지우지 말고 변화 과정을 표현한다. sourceExcerpt와 dateEvidence는 새 자료의 근거만 담는다. 기존 기록의 작성자가 불분명하면 새 작성자에게 임의로 귀속하지 않는다.',
+      'currentSummary는 현재 박스에 표시할 별도의 압축 요약이다. 책의 줄거리나 세부 사례를 설명하지 말고 각 사람이 가진 생각·시선·변화를 이름과 함께 한국어 2~3문장, 총 250자 이내로 요약한다. 자세한 thoughts/summary를 그대로 복사하지 않는다.',
+      '사용자가 기존 글의 작성자를 명시적으로 확인했다면 그 글과 같은 내용의 기존 작성자 미확인 기록도 확인된 이름으로 바로잡는다.',
       '이미지 속 글을 읽고 같은 시기의 관련 생각을 묶는다. 서로 다른 시기의 내용은 최대 12개의 개별 entries로 나눈다.',
       '각 entry의 title은 날짜·연월·사람 이름을 나열하지 않는 한국어 24자 이내의 아주 짧은 한 줄 요약 제목이다. 예: 익숙한 분류를 의심하다, 다른 관점을 받아들이다. 같은 월의 기존 기록이 있으면 통합된 핵심을 제목에 반영한다. summary는 한국어 1~2개 짧은 문단(3000자 이하)으로 당시의 관점과 생각을 정리한다.',
       'sourceExcerpt는 해당 기록의 근거가 되는 원문을 읽은 그대로 담는다(6000자 이하). 읽을 수 없는 글자와 화자·생각·사실을 만들어내지 않는다.',
@@ -84,7 +87,8 @@ export async function analyzeFlowImport(input: { text?: unknown; images?: unknow
       type: 'json_schema', name: 'flow_import', strict: true,
       schema: { type: 'object', additionalProperties: false, required: ['entries'], properties: {
         entries: { type: 'array', items: { type: 'object', additionalProperties: false,
-          required: ['title', 'summary', 'eventDate', 'dateEvidence', 'sourceExcerpt', 'thoughts'], properties: {
+          required: ['title', 'summary', 'eventDate', 'dateEvidence', 'sourceExcerpt', 'thoughts', 'currentSummary'], properties: {
+            currentSummary: { type: 'string' },
             thoughts: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['name', 'thought'], properties: { name: { type: 'string' }, thought: { type: 'string' } } } },
             title: { type: 'string' }, summary: { type: 'string' }, eventDate: { type: ['string', 'null'] },
             dateEvidence: { type: 'string' }, sourceExcerpt: { type: 'string' },

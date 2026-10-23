@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { doc, runTransaction } from 'firebase/firestore';
 import { ImagePlus, LoaderCircle, Upload, X, Check } from 'lucide-react';
 import { auth, db } from '@/lib/firebase';
@@ -28,7 +28,7 @@ async function prepareImage(file: File): Promise<string> {
   } finally { bitmap.close(); }
 }
 
-export default function FlowImport({ history, onSaved }: { history: ThoughtFlowHistory[]; onSaved: (id: string) => void }) {
+export default function FlowImport({ history, onSaved, assignment }: { history: ThoughtFlowHistory[]; onSaved: (id: string) => void; assignment?: { item: ThoughtFlowHistory; name: string; requestId: string } | null }) {
   const { spaceId, user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [text, setText] = useState('');
@@ -43,6 +43,14 @@ export default function FlowImport({ history, onSaved }: { history: ThoughtFlowH
   const batchIdentity = useRef({ id: '', createdAt: '' });
   const operationRunning = useRef(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const [pendingAssignment, setPendingAssignment] = useState<string | null>(null);
+  const assignmentStarted = useRef('');
+  useEffect(() => {
+    if (!assignment) return;
+    setText(`사용자가 확인한 작성자는 ${assignment.name}이다. 아래는 그 사람이 쓴 원문이다.\n시기: ${assignment.item.eventDate || assignment.item.startAt.slice(0, 10)}\n\n${assignment.item.sourceExcerpt || assignment.item.summary}`);
+    setSelectedNames([assignment.name]); setImages([]); setTextSources(assignment.item.sourceNames || []); setDrafts(null);
+    setPendingAssignment(assignment.requestId); setIsOpen(true);
+  }, [assignment?.requestId]);
   const fieldClass = 'w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:border-gray-500 disabled:opacity-50';
 
   const addFiles = async (files: File[]) => {
@@ -99,6 +107,7 @@ export default function FlowImport({ history, onSaved }: { history: ThoughtFlowH
         const record = {
           kind: 'import' as const, title: entry.title.trim(), summary: entry.summary,
           thoughts: entry.thoughts || [], eventDate: month, startAt, endAt: startAt,
+          currentSummary: entry.currentSummary || entry.summary,
           createdAt: previous.map(item => item.createdAt).sort()[0] || createdAt,
           updatedAt: new Date().toISOString(), materials, importedBy: user?.uid || '',
           sourceExcerpt: entry.sourceExcerpt, dateEvidence: entry.dateEvidence, sourceNames,
@@ -147,6 +156,13 @@ export default function FlowImport({ history, onSaved }: { history: ThoughtFlowH
     } catch (cause) { setError(cause instanceof Error ? cause.message : '자료를 정리하지 못했습니다.'); }
     finally { operationRunning.current = false; setBusy(null); }
   };
+
+  useEffect(() => {
+    if (!pendingAssignment || assignmentStarted.current === pendingAssignment) return;
+    assignmentStarted.current = pendingAssignment;
+    setPendingAssignment(null);
+    void analyze();
+  }, [pendingAssignment]);
 
   return (
     <section className="rounded-2xl border border-gray-100 bg-gray-50/50 p-4 sm:p-6">

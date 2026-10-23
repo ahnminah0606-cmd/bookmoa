@@ -52,7 +52,7 @@ export function latestThought(history: ThoughtFlowHistory[], current: ThoughtFlo
   if (current?.summary && (!latest || (currentDate && Date.parse(currentDate) > Date.parse(latest.startAt)))) {
     return { summary: current.summary, startAt: currentDate || current.startAt };
   }
-  return latest ? { summary: latest.summary, startAt: latest.startAt, eventDate: latest.eventDate, endAt: latest.endAt } : null;
+  return latest ? { summary: latest.currentSummary || latest.summary.split(/(?<=[.!?。])\s+/).slice(0, 2).join(' '), startAt: latest.startAt, eventDate: latest.eventDate, endAt: latest.endAt } : null;
 }
 
 export function compactPeriod(start?: string, end?: string): string {

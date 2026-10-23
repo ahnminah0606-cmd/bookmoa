@@ -102,6 +102,7 @@ export type ThoughtFlowHistory = {
   mergedInto?: string;
   thoughts?: PersonThought[];
   materials?: FlowMaterial[];
+  currentSummary?: string;
 };
 
 export type PersonThought = { name: string; thought: string };
@@ -114,4 +115,5 @@ export type FlowImportDraft = {
   dateEvidence: string;
   sourceExcerpt: string;
   thoughts?: PersonThought[];
+  currentSummary?: string;
 };

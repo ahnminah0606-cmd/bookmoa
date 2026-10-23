@@ -83,3 +83,10 @@ test('person names and their thoughts remain separate in structured results', ()
   assert.throws(() => parseImportResult({ entries: [{ ...draft, thoughts: [{ name: '', thought: '주인이 없는 주장' }] }] }));
   assert.equal(validateFlowImport({ text: '2025년 3월', authorNames: '성모, 민아', existingEntries: [{ eventDate: '2025-03', summary: '기존 내용', thoughts }] }).authorNames, '성모, 민아');
 });
+
+test('current prefers a separate short synthesis while detailed thoughts stay in the timeline', async () => {
+  const { latestThought } = await import('../src/lib/flowTimeline');
+  const detailed = { ...record('latest', '2026-03', '2026-10-24'), summary: '긴 생각과 사례의 상세 기록', currentSummary: '성모는 익숙한 분류 기준을 의심했다.' };
+  assert.equal(latestThought([detailed], null)?.summary, detailed.currentSummary);
+  assert.equal(detailed.summary, '긴 생각과 사례의 상세 기록');
+});
