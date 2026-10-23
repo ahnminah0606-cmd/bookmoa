@@ -97,7 +97,7 @@ export default function FlowImport({ history, onSaved }: { history: ThoughtFlowH
         materials.push({ id: materialId, authorNames: authorNames.trim(), sourceExcerpt: entry.sourceExcerpt, dateEvidence: entry.dateEvidence, sourceNames, createdAt });
         const startAt = eventStartAt(month);
         const record = {
-          kind: 'import' as const, title: `${formatEventDate(month)}의 생각`, summary: entry.summary,
+          kind: 'import' as const, title: entry.title.trim(), summary: entry.summary,
           thoughts: entry.thoughts || [], eventDate: month, startAt, endAt: startAt,
           createdAt: previous.map(item => item.createdAt).sort()[0] || createdAt,
           updatedAt: new Date().toISOString(), materials, importedBy: user?.uid || '',

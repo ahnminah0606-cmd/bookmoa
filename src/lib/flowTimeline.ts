@@ -38,6 +38,14 @@ export function historyVersion(item?: ThoughtFlowHistory): string {
   return item ? JSON.stringify([item.summary, item.thoughts || [], item.updatedAt || item.createdAt, item.mergedInto || '', item.materials?.map(material => material.id) || []]) : '';
 }
 
+export function timelineTitle(item: ThoughtFlowHistory): string {
+  const title = (item.title || '').split(/\s+[—–]\s+/).at(-1)!.trim();
+  const dateTitle = /^\d{4}(?:년|[-/.])/u.test(title);
+  const text = title && !dateTitle ? title : item.summary.replace(/^[^:\n]{1,20}:\s*/, '').split(/[\n。.!?]/)[0].trim();
+  const singleLine = text.replace(/\s+/g, ' ').trim() || '함께 돌아본 생각';
+  return singleLine.length > 32 ? `${singleLine.slice(0, 31).trim()}…` : singleLine;
+}
+
 export function latestThought(history: ThoughtFlowHistory[], current: ThoughtFlowCurrent | null): { summary: string; startAt: string; eventDate?: string } | null {
   const latest = sortFlowTimeline(history).filter(item => item.summary.trim()).at(-1);
   const currentDate = current?.analyzedThrough || current?.startAt;

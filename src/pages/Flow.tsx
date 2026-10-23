@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
 import type { ThoughtFlowCurrent, ThoughtFlowHistory } from '@/types';
 import FlowImport from '@/components/flow/FlowImport';
-import { sortFlowTimeline, formatEventDate, latestThought } from '@/lib/flowTimeline';
+import { sortFlowTimeline, formatEventDate, latestThought, timelineTitle } from '@/lib/flowTimeline';
 
 const PAGE_SIZE = 10;
 type FlowDecision = 'initialize' | 'update' | 'rewrite' | 'unchanged';
@@ -221,11 +221,11 @@ export default function Flow() {
               <div key={item?.id || `empty-${number}`} className="border-b border-gray-100 last:border-b-0">
                 <button type="button" disabled={!item} aria-expanded={item ? openEntries.has(item.id) : undefined} aria-controls={item ? `thought-${item.id}` : undefined} onClick={() => item && toggleEntry(item.id)} className="flex min-h-12 w-full items-center gap-2 px-4 py-3 text-left text-sm enabled:hover:bg-gray-50 disabled:cursor-default">
                   <span className="w-8 shrink-0 text-xs tabular-nums text-gray-400">{String(number).padStart(2, '0')}</span>
-                  <span className={item ? 'shrink-0 text-gray-700' : 'text-gray-200'}>{item ? item.eventDate ? formatEventDate(item.eventDate) : formatPeriod(item.startAt, item.endAt) : '—'}</span>
-                  {item?.title && <span className="min-w-0 flex-1 truncate text-xs text-gray-400">{item.title}</span>}
+                  <span className={item ? 'min-w-0 flex-1 truncate text-gray-700' : 'text-gray-200'}>{item ? timelineTitle(item) : '—'}</span>
                   {item && <ChevronDown className={`ml-auto h-4 w-4 shrink-0 text-gray-400 transition-transform ${openEntries.has(item.id) ? 'rotate-180' : ''}`} />}
                 </button>
                 {item && openEntries.has(item.id) && <div id={`thought-${item.id}`} className="space-y-4 border-t border-gray-100 bg-gray-50/50 px-5 py-5 sm:pl-14">
+                  <p className="text-xs text-gray-400">{item.eventDate ? formatEventDate(item.eventDate) : formatPeriod(item.startAt, item.endAt)}</p>
                   {normalizeParagraphs(item.summary).map((paragraph, index) => <p key={index} className="whitespace-pre-wrap break-words text-sm leading-7 text-gray-800">{paragraph}</p>)}
                   {!!(item.materials?.length || item.sourceExcerpt) && <details className="text-xs text-gray-500"><summary className="cursor-pointer">자료 원문 · 누구의 생각인지</summary>{(item.materials || [{ id: item.id, authorNames: '작성자 미확인', sourceExcerpt: item.sourceExcerpt || '', dateEvidence: item.dateEvidence || '', sourceNames: item.sourceNames || [], createdAt: item.createdAt }]).map(material => <div key={material.id} className="mt-3 space-y-2 border-t border-gray-100 pt-3"><p className="font-medium">{material.authorNames}</p><p>{material.sourceNames.join(' · ')}</p><p className="whitespace-pre-wrap">{material.dateEvidence}</p><p className="whitespace-pre-wrap leading-6">{material.sourceExcerpt}</p></div>)}</details>}
                 </div>}
