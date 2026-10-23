@@ -80,7 +80,7 @@ export default function FlowImport({ history, onSaved, assignment }: { history: 
     if (new Set(months).size !== months.length) throw new Error('같은 시기의 자료를 다시 한 번 통합해 주세요.');
     const { id: importId, createdAt } = batchIdentity.current;
     const sourceNames = [...textSources, ...images.map(image => image.name)];
-    if (text.trim() && !textSources.length) sourceNames.unshift('붙여 넣은 디스코드 글');
+    if (text.trim() && !textSources.length) sourceNames.unshift('붙여 넣은 글');
     const targets = entries.map(entry => {
       const month = periodKey(entry.eventDate!);
       const id = `period_${month}`;
@@ -167,15 +167,15 @@ export default function FlowImport({ history, onSaved, assignment }: { history: 
   return (
     <section className="rounded-2xl border border-gray-100 bg-gray-50/50 p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div><h2 className="text-sm font-medium text-gray-800">디스코드 자료로 생각 모으기</h2><p className="mt-1 text-xs leading-5 text-gray-500">누구의 생각인지 알려주면 시기별로 정리하고, 같은 달의 기록에 합쳐요.</p></div>
-        <button type="button" onClick={() => setIsOpen(value => !value)} aria-expanded={isOpen} className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-xs font-medium text-white"><Upload className="h-3.5 w-3.5" />{isOpen ? '접기' : '자료 추가'}</button>
+        <div><h2 className="text-sm font-medium text-gray-800">자료 업데이트</h2><p className="mt-1 text-xs leading-5 text-gray-500">누구의 생각인지 알려주면 시기별로 정리하고, 같은 달의 기록에 합쳐요.</p></div>
+        <button type="button" onClick={() => setIsOpen(value => !value)} aria-expanded={isOpen} className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-xs font-medium text-white"><Upload className="h-3.5 w-3.5" />{isOpen ? '접기' : '자료 업데이트'}</button>
       </div>
       {success && <p role="status" className="mt-3 text-xs text-emerald-700">{success}</p>}
       {isOpen && <div className="mt-5 space-y-4">
         <fieldset className="space-y-2"><legend className="text-xs font-medium text-gray-600">누구의 생각인가요?</legend><div className="flex flex-wrap gap-2">{['민아', '성모'].map(name => <button key={name} type="button" aria-pressed={selectedNames.includes(name)} disabled={!!busy} onClick={() => setSelectedNames(current => current.includes(name) ? current.filter(item => item !== name) : [...current, name])} className={`rounded-full border px-5 py-2 text-sm transition-colors ${selectedNames.includes(name) ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-200 bg-white text-gray-600'}`}>{name}</button>)}</div><p className="text-xs leading-5 text-gray-400">둘 다 선택할 수 있어요. 대화 자료에서는 메시지의 이름을 기준으로 생각을 구분해요.</p></fieldset>
-        <label className="block space-y-2"><span className="text-xs font-medium text-gray-600">디스코드 글</span><textarea disabled={!!busy || !!drafts} value={text} maxLength={20_000} onChange={event => setText(event.target.value)} onPaste={event => { const files = Array.from<File>(event.clipboardData.files); if (files.length) { event.preventDefault(); void addFiles(files); } }} placeholder={'메시지와 날짜를 붙여 넣어 주세요.\n예: 2025년 6월 · 성모: … 민아: …'} className={`${fieldClass} min-h-40 resize-y`} /></label>
+        <label className="block space-y-2"><span className="text-xs font-medium text-gray-600">글</span><textarea disabled={!!busy || !!drafts} value={text} maxLength={20_000} onChange={event => setText(event.target.value)} onPaste={event => { const files = Array.from<File>(event.clipboardData.files); if (files.length) { event.preventDefault(); void addFiles(files); } }} placeholder={'메시지와 날짜를 붙여 넣어 주세요.\n예: 2025년 6월 · 성모: … 민아: …'} className={`${fieldClass} min-h-40 resize-y`} /></label>
         <div onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); if (!drafts) void addFiles(Array.from<File>(event.dataTransfer.files)); }} className="rounded-xl border border-dashed border-gray-200 bg-white p-4">
-          <input ref={fileInput} type="file" multiple accept="image/png,image/jpeg,image/webp,.txt,.md,.json" disabled={!!busy || !!drafts} className="sr-only" onChange={event => void addFiles(Array.from<File>(event.target.files || []))} aria-label="디스코드 이미지 또는 글 파일 선택" />
+          <input ref={fileInput} type="file" multiple accept="image/png,image/jpeg,image/webp,.txt,.md,.json" disabled={!!busy || !!drafts} className="sr-only" onChange={event => void addFiles(Array.from<File>(event.target.files || []))} aria-label="이미지 또는 글 파일 선택" />
           <button type="button" disabled={!!busy || !!drafts} onClick={() => fileInput.current?.click()} className="inline-flex items-center gap-2 text-sm text-gray-700 disabled:opacity-50"><ImagePlus className="h-4 w-4" />이미지 · 글 파일 선택</button>
           <p className="mt-2 text-xs leading-5 text-gray-400">이미지 최대 3장 · 글 20,000자. 첨부한 원본 이미지 대신 추출한 글을 보관해요.</p>
           {!!images.length && <ul className="mt-3 flex flex-wrap gap-3">{images.map(image => <li key={image.id} className="relative w-24"><img src={image.dataUrl} alt={image.name} className="h-24 w-24 rounded-lg border object-contain" /><button type="button" disabled={!!busy || !!drafts} onClick={() => setImages(current => current.filter(item => item.id !== image.id))} aria-label={`${image.name} 제거`} className="absolute right-1 top-1 rounded-full bg-white p-1 shadow"><X className="h-3 w-3" /></button></li>)}</ul>}
