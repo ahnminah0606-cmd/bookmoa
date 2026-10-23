@@ -167,8 +167,8 @@ export default function FlowImport({ history, onSaved, assignment }: { history: 
   return (
     <section className="rounded-2xl border border-gray-100 bg-gray-50/50 p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div><h2 className="text-sm font-medium text-gray-800">자료 업데이트</h2><p className="mt-1 text-xs leading-5 text-gray-500">누구의 생각인지 알려주면 시기별로 정리하고, 같은 달의 기록에 합쳐요.</p></div>
-        <button type="button" onClick={() => setIsOpen(value => !value)} aria-expanded={isOpen} className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-xs font-medium text-white"><Upload className="h-3.5 w-3.5" />{isOpen ? '접기' : '자료 업데이트'}</button>
+        <div><h2 className="text-sm font-medium text-gray-800">자료로 생각 모으기</h2><p className="mt-1 text-xs leading-5 text-gray-500">누구의 생각인지 알려주면 시기별로 정리하고, 같은 달의 기록에 합쳐요.</p></div>
+        <button type="button" onClick={() => setIsOpen(value => !value)} aria-expanded={isOpen} className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-xs font-medium text-white"><Upload className="h-3.5 w-3.5" />{isOpen ? '접기' : '자료 추가'}</button>
       </div>
       {success && <p role="status" className="mt-3 text-xs text-emerald-700">{success}</p>}
       {isOpen && <div className="mt-5 space-y-4">
