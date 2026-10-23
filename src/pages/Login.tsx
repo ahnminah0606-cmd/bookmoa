@@ -227,66 +227,15 @@ export default function Login() {
               />
               <button
                 type="submit"
-                disabled={isSubmitting…4206 tokens truncated…tring;
-  startedAt?: string;
-  completedAt?: string;
-  deletedAt?: string;
-  quoteLookup?: BookQuoteLookup | null;
-};
-
-export type DiscussionRecord = {
-  id: string;
-  bookId: string;
-  content: string;
-  updatedAt: string;
-  updatedBy: string; // UID of the last editor
-  isEditing?: string; // UID of the user currently editing (Soft Lock)
-  deletedAt?: string;
-};
-
-export type AnalysisResult = {
-  id: string;
-  recordId: string;
-  user1Thought: string;
-  user2Thought: string;
-  sharedSummary: string;
-  updatedAt: string;
-};
-
-export type Reflection = {
-  id: string;
-  bookId: string;
-  question: string;
-  content: string; // raw text for this reflection
-  updatedAt: string;
-};
-
-export type ThoughtFlowCurrent = {
-  summary: string;
-  startAt: string;
-  updatedAt: string;
-  analyzedThrough: string;
-};
-
-export type ThoughtFlowHistory = {
-  id: string;
-  summary: string;
-  startAt: string;
-  endAt: string;
-  createdAt: string;
-  kind?: 'import';
-  title?: string;
-  eventDate?: string;
-  dateEvidence?: string;
-  sourceExcerpt?: string;
-  sourceNames?: string[];
-  importedBy?: string;
-};
-
-export type FlowImportDraft = {
-  title: string;
-  summary: string;
-  eventDate: string | null;
-  dateEvidence: string;
-  sourceExcerpt: string;
-};
+                disabled={isSubmitting || !inviteCode.trim()}
+                className="w-full flex justify-center py-3 px-4 rounded-xl text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400 transition-colors"
+              >
+                {isSubmitting ? '서재 찾는 중...' : '초대된 서재로 입장'}
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
