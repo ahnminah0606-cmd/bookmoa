@@ -90,3 +90,12 @@ test('current prefers a separate short synthesis while detailed thoughts stay in
   assert.equal(latestThought([detailed], null)?.summary, detailed.currentSummary);
   assert.equal(detailed.summary, '긴 생각과 사례의 상세 기록');
 });
+
+
+test('conflict comparison ignores Firestore map field order but detects real thought changes', async () => {
+  const { historyVersion } = await import('../src/lib/flowTimeline');
+  const first = { ...record('period_2025-03', '2025-03', '2026-10-24'), thoughts: [{ name: '성모', thought: '분류를 의심했다.' }] };
+  const reordered = { ...first, thoughts: [{ thought: '분류를 의심했다.', name: '성모' }] };
+  assert.equal(historyVersion(first), historyVersion(reordered));
+  assert.notEqual(historyVersion(first), historyVersion({ ...reordered, thoughts: [{ name: '성모', thought: '다른 생각' }] }));
+});

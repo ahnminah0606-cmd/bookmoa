@@ -35,7 +35,9 @@ export function historyPeriod(item: ThoughtFlowHistory): string | null {
 }
 
 export function historyVersion(item?: ThoughtFlowHistory): string {
-  return item ? JSON.stringify([item.summary, item.thoughts || [], item.updatedAt || item.createdAt, item.mergedInto || '', item.materials?.map(material => material.id) || []]) : '';
+  // Firestore map key order can differ between query and transaction snapshots.
+  // Compare explicit values rather than serializing nested objects as received.
+  return item ? JSON.stringify([item.summary, (item.thoughts || []).map(person => [person.name, person.thought]), item.updatedAt || item.createdAt, item.mergedInto || '', item.materials?.map(material => material.id) || []]) : '';
 }
 
 export function timelineTitle(item: ThoughtFlowHistory): string {
