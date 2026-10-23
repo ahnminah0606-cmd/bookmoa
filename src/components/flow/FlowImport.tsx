@@ -48,7 +48,7 @@ export default function FlowImport({ history, onSaved, assignment }: { history: 
   useEffect(() => {
     if (!assignment) return;
     setText(`사용자가 확인한 작성자는 ${assignment.name}이다. 아래는 그 사람이 쓴 원문이다.\n시기: ${assignment.item.eventDate || assignment.item.startAt.slice(0, 10)}\n\n${assignment.item.sourceExcerpt || assignment.item.summary}`);
-    setSelectedNames([assignment.name]); setImages([]); setTextSources(assignment.item.sourceNames || []); setDrafts(null);
+    setSelectedNames(assignment.name.split(',').map(name => name.trim())); setImages([]); setTextSources(assignment.item.sourceNames || []); setDrafts(null);
     setPendingAssignment(assignment.requestId); setIsOpen(true);
   }, [assignment?.requestId]);
   const fieldClass = 'w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:border-gray-500 disabled:opacity-50';
