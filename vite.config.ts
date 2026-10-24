@@ -4,7 +4,7 @@ import path from 'path';
 import {defineConfig, loadEnv, type Plugin} from 'vite';
 import { createDiscussionSummary, toPublicOpenAIError } from './server/openai';
 import { verifyFirebaseToken } from './server/auth';
-import { findBookQuotes, quoteError } from './server/bookQuotes';
+import { quoteError } from './server/bookQuotes';
 import { analyzeFlowImport, flowImportError, MAX_IMPORT_BYTES } from './server/flowImport';
 
 function localApiPlugin(apiKey: string | undefined, model: string | undefined, projectId: string | undefined, quoteModel?: string, importModel?: string): Plugin {
@@ -53,8 +53,8 @@ function localApiPlugin(apiKey: string | undefined, model: string | undefined, p
         req.on('end', async () => {
           try {
             await verifyFirebaseToken(req.headers.authorization, projectId);
-            const quotes = await findBookQuotes(JSON.parse(body || '{}'), { apiKey, model: quoteModel });
-            res.end(JSON.stringify({ quotes }));
+            res.statusCode = 410;
+            res.end(JSON.stringify({ error: '자동 문장 검색은 사용하지 않습니다.' }));
           } catch (error) {
             const failure = quoteError(error);
             res.statusCode = failure.status;

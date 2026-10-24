@@ -1,3 +1,4 @@
+import BookQuoteEditor from '@/components/BookQuoteEditor';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
@@ -242,6 +243,7 @@ export default function BookDetail() {
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4 md:px-8 space-y-12 pb-28">
+      <BookQuoteEditor book={book} />
       {/* 1. Header & Navigation */}
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

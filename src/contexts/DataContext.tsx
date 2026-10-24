@@ -1,9 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
-import { Book, BookQuoteLookup } from '../types';
-import { quoteBookKey, needsQuoteLookup } from '../lib/bookQuotes';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Book } from '../types';
 import { INITIAL_USER_BOOKS } from '../lib/mockData';
 import { useAuth } from './AuthContext';
-import { db, auth } from '../lib/firebase';
+import { db } from '../lib/firebase';
 import {
   collection,
   doc,
@@ -12,8 +11,7 @@ import {
   deleteDoc,
   onSnapshot,
   getDocs,
-  writeBatch,
-  runTransaction
+  writeBatch
 } from 'firebase/firestore';
 
 interface DataContextType {
@@ -28,9 +26,7 @@ interface DataContextType {
   getTrashBooks: () => Book[];
   getActiveBooks: () => Book[];
   resetToDefaultBooks: () => Promise<void>;
-  quoteSearchBookId: string | null;
-  retryBookQuotes: (id: string) => Promise<void>;
-  quoteStorageError: string | null;
+
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -39,69 +35,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const { spaceId, isAuthenticated } = useAuth();
   const [books, setBooks] = useState<Book[]>(INITIAL_USER_BOOKS);
   const [isLoading, setIsLoading] = useState(true);
-  const [quoteSearchBookId, setQuoteSearchBookId] = useState<string | null>(null);
-  const [quoteQueueTick, setQuoteQueueTick] = useState(0);
-  const [loadedSpaceId, setLoadedSpaceId] = useState<string | null>(null);
-  const [quoteStorageError, setQuoteStorageError] = useState<string | null>(null);
-  const quoteRequestRunning = useRef(false);
-  const attemptedQuoteKeys = useRef(new Set<string>());
-
-  // Search once per book identity, persisting successes, no-results, and failures alike.
-  useEffect(() => {
-    if (!isAuthenticated || !spaceId || loadedSpaceId !== spaceId || isLoading || quoteRequestRunning.current) return;
-    const book = books.find(book => needsQuoteLookup(book)
-      && !attemptedQuoteKeys.current.has(`${spaceId}:${book.id}:${quoteBookKey(book)}`));
-    if (!book) return;
-    const key = quoteBookKey(book);
-    const failureKey = `${spaceId}:${book.id}:${key}`;
-    attemptedQuoteKeys.current.add(failureKey);
-    quoteRequestRunning.current = true;
-    setQuoteSearchBookId(book.id);
-    const saveLookup = async (lookup: BookQuoteLookup) => {
-      const ref = doc(db, 'spaces', spaceId, 'books', book.id);
-      await runTransaction(db, async transaction => {
-        const snapshot = await transaction.get(ref);
-        if (!snapshot.exists()) return;
-        const latest = snapshot.data() as Book;
-        if (latest.deletedAt || quoteBookKey(latest) !== key) return;
-        transaction.update(ref, { quoteLookup: { ...lookup, backgroundRetryVersion: 2 } });
-      });
-    };
-    void (async () => {
-      let lookup: BookQuoteLookup;
-      try {
-        const token = await auth.currentUser?.getIdToken();
-        if (!token) throw new Error('로그인이 필요합니다.');
-        const response = await fetch('/api/quotes', {
-          method: 'POST',
-          signal: AbortSignal.timeout(60_000),
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ title: book.title, author: book.author, isbn: book.isbn }),
-        });
-        const result = await response.json();
-        if (!response.ok || !Array.isArray(result.quotes)) throw new Error(result.error || '문장 검색 실패');
-        lookup = { key, status: result.quotes.length ? 'ready' : 'not_found', quotes: result.quotes, checkedAt: new Date().toISOString() };
-      } catch (error) {
-        console.error('Book quote search failed:', error);
-        lookup = { key, status: 'error', quotes: [], checkedAt: new Date().toISOString() };
-      }
-      try {
-        await saveLookup(lookup);
-      } catch (error) {
-        // Prevent repeat paid searches when persistence fails.
-        setQuoteStorageError('찾은 문장을 서재에 저장하지 못했습니다. 연결 상태를 확인한 뒤 새로고침해 주세요.');
-        console.error('Book quotes could not be saved:', error);
-      } finally {
-        quoteRequestRunning.current = false;
-        setQuoteSearchBookId(null);
-        setQuoteQueueTick(value => value + 1);
-      }
-    })();
-  }, [books, spaceId, loadedSpaceId, isAuthenticated, isLoading, quoteQueueTick]);
 
   useEffect(() => {
     if (!isAuthenticated || !spaceId) {
-      setLoadedSpaceId(null);
       setBooks(INITIAL_USER_BOOKS);
       setIsLoading(false);
       return;
@@ -148,7 +84,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
           setBooks(loadedBooks);
         }
         setIsLoading(false);
-        setLoadedSpaceId(spaceId);
       },
       (error) => {
         console.error("Firestore books listener error:", error);
@@ -288,14 +223,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const getTrashBooks = () => books.filter(b => !!b.deletedAt);
   const getActiveBooks = () => books.filter(b => !b.deletedAt);
-  const retryBookQuotes = async (id: string) => {
-    const book = books.find(book => book.id === id);
-    if (!book || quoteRequestRunning.current) return;
-    if (!spaceId) return;
-    await updateDoc(doc(db, 'spaces', spaceId, 'books', id), { quoteLookup: null });
-    attemptedQuoteKeys.current.delete(`${spaceId}:${id}:${quoteBookKey(book)}`);
-    setQuoteQueueTick(value => value + 1);
-  };
 
   return (
     <DataContext.Provider
@@ -310,10 +237,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setCurrentBook,
         getTrashBooks,
         getActiveBooks,
-        resetToDefaultBooks,
-        quoteSearchBookId,
-        retryBookQuotes,
-        quoteStorageError
+        resetToDefaultBooks
       }}
     >
       {children}

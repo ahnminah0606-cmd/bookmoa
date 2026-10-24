@@ -74,10 +74,10 @@ test('production API rejects non-POST and unauthenticated requests before search
 });
 
 
-test('previous unsuccessful lookups retry once in the background, with no refresh loop', () => {
+test('previous unsuccessful lookups do not automatically repeat paid searches', () => {
   for (const status of ['error', 'not_found'] as const) {
     const old = { ...saved, quoteLookup: { ...saved.quoteLookup!, status, backgroundRetryVersion: undefined } };
-    assert.equal(needsQuoteLookup(old), true);
+    assert.equal(needsQuoteLookup(old), false);
     assert.equal(needsQuoteLookup({ ...old, quoteLookup: { ...old.quoteLookup, backgroundRetryVersion: 2 } }), false);
   }
   assert.equal(needsQuoteLookup(saved), false);

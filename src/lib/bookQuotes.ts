@@ -12,8 +12,7 @@ export function getSavedQuotes(books: Book[]): (BookQuote & { bookId: string; bo
 }
 
 export function needsQuoteLookup(book: Book): boolean {
-  return !book.deletedAt && (book.quoteLookup?.key !== quoteBookKey(book)
-    || (book.quoteLookup.status !== 'ready' && book.quoteLookup.backgroundRetryVersion !== 2));
+  return !book.deletedAt && book.quoteLookup?.key !== quoteBookKey(book);
 }
 
 

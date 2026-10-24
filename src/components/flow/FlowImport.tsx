@@ -4,7 +4,7 @@ import { ImagePlus, LoaderCircle, Upload, X, Check } from 'lucide-react';
 import { auth, db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { eventStartAt, formatEventDate, validateImportDrafts, periodKey, historyPeriod, historyVersion } from '@/lib/flowTimeline';
-import { FlowConflictError, retryFlowIntegration } from '@/lib/flowIntegration';
+import { FlowConflictError, retryFlowIntegration, manualFlowDraft } from '@/lib/flowIntegration';
 import type { FlowImportDraft, ThoughtFlowHistory, FlowMaterial } from '@/types';
 
 type ImageAttachment = { id: string; name: string; dataUrl: string };
@@ -33,6 +33,9 @@ export default function FlowImport({ onSaved, assignment }: { history: ThoughtFl
   const { spaceId, user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [text, setText] = useState('');
+  const [mode, setMode] = useState<'manual' | 'ai'>('manual');
+  const [month, setMonth] = useState('');
+  const [manualTitle, setManualTitle] = useState('');
   const [selectedNames, setSelectedNames] = useState<string[]>([]);
   const authorNames = selectedNames.join(', ');
   const [images, setImages] = useState<ImageAttachment[]>([]);
@@ -48,6 +51,7 @@ export default function FlowImport({ onSaved, assignment }: { history: ThoughtFl
   const assignmentStarted = useRef('');
   useEffect(() => {
     if (!assignment) return;
+    setMode('ai'); setMonth((assignment.item.eventDate || assignment.item.startAt).slice(0, 7));
     setText(`사용자가 확인한 작성자는 ${assignment.name}이다. 아래는 그 사람이 쓴 원문이다.\n시기: ${assignment.item.eventDate || assignment.item.startAt.slice(0, 10)}\n\n${assignment.item.sourceExcerpt || assignment.item.summary}`);
     setSelectedNames(assignment.name.split(',').map(name => name.trim())); setImages([]); setTextSources(assignment.item.sourceNames || []); setDrafts(null);
     setPendingAssignment(assignment.requestId); setIsOpen(true);
@@ -123,40 +127,48 @@ export default function FlowImport({ onSaved, assignment }: { history: ThoughtFl
 
   const analyze = async (confirmedDates = false) => {
     if (operationRunning.current || !spaceId) return;
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) { setError('자료의 시기를 선택해 주세요.'); return; }
+    if (mode === 'manual' && (selectedNames.length !== 1 || !text.trim() || images.length)) { setError('바로 저장은 한 사람을 선택하고 정리된 글을 넣어 주세요. 이미지는 AI 정리에서 사용할 수 있어요.'); return; }
     if (!authorNames.trim()) { setError('민아 또는 성모를 선택해 주세요.'); return; }
     if (confirmedDates && drafts) {
       try { validateImportDrafts(drafts); } catch (cause) { setError((cause as Error).message); return; }
     }
     operationRunning.current = true; setBusy('analyzing'); setError(''); setSuccess('');
     try {
-      const token = await auth.currentUser?.getIdToken();
+      const token = mode === 'ai' ? await auth.currentUser?.getIdToken() : 'manual';
       if (!token) throw new Error('로그인이 필요합니다.');
       const hints = confirmedDates && drafts ? `사용자가 확인한 시기: ${JSON.stringify(drafts.map(entry => ({ eventDate: entry.eventDate, sourceExcerpt: entry.sourceExcerpt })))}` : '';
-      const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify([authorNames.trim(), text, images.map(image => image.dataUrl)])));
+      const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify([mode, month, mode === 'manual' ? manualTitle : '', authorNames.trim(), text, images.map(image => image.dataUrl)])));
       batchIdentity.current = { id: Array.from(new Uint8Array(digest)).map(byte => byte.toString(16).padStart(2, '0')).join(''), createdAt: new Date().toISOString() };
       const id = await retryFlowIntegration(async () => {
         setBusy('analyzing');
         const snapshot = await getDocsFromServer(collection(db, 'spaces', spaceId, 'flowHistory'));
         const context = snapshot.docs.map(item => ({ ...item.data(), id: item.id } as ThoughtFlowHistory)).filter(item => !item.mergedInto);
+        const related = context.filter(item => historyPeriod(item) === month);
+        const duplicate = related.find(item => item.materials?.some(material => material.id === `${batchIdentity.current.id}_${month}`));
+        if (duplicate) return duplicate.id;
+        if (mode === 'manual') {
+          setBusy('saving');
+          return saveEntries([manualFlowDraft(context, month, selectedNames[0], text.trim(), manualTitle)], context);
+        }
         const response = await fetch('/api/flow-import', {
           method: 'POST', signal: AbortSignal.timeout(60_000),
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ text: [hints, text].filter(Boolean).join('\n\n'), images: images.map(image => image.dataUrl), authorNames,
-            existingEntries: context.filter(item => historyPeriod(item)).map(item => ({ eventDate: item.eventDate, summary: item.summary, thoughts: item.thoughts || [], sourceExcerpt: item.sourceExcerpt || '', materials: (item.materials || []).map(material => ({ authorNames: material.authorNames, sourceExcerpt: material.sourceExcerpt })) })),
+          body: JSON.stringify({ text: [`사용자가 지정한 자료 시기: ${month}. 이 월의 기록만 반환한다.`, hints, text].filter(Boolean).join('\n\n'), images: images.map(image => image.dataUrl), authorNames,
+            existingEntries: related.map(item => ({ eventDate: item.eventDate, summary: item.summary, thoughts: item.thoughts || [] })),
           }),
         });
         const result = await response.json();
         if (!response.ok || !Array.isArray(result.entries)) throw new Error(result.error || '자료를 정리하지 못했습니다.');
         if (!result.entries.length) throw new Error('읽을 수 있는 생각 기록을 찾지 못했어요. 글자가 잘 보이는 자료를 올려 주세요.');
-        if (result.entries.some((entry: FlowImportDraft) => !entry.eventDate)) {
-          setDrafts(result.entries.map((entry: FlowImportDraft) => ({ ...entry, id: crypto.randomUUID() })));
-          return;
-        }
+        // The user already chose a month, so date confirmation needs no second AI request.
+        result.entries = result.entries.map((entry: FlowImportDraft) => ({ ...entry, eventDate: entry.eventDate || month }));
+        if (result.entries.some((entry: FlowImportDraft) => entry.eventDate?.slice(0, 7) !== month)) throw new Error('선택한 시기와 자료의 날짜가 달라요. 시기를 확인해 주세요.');
         setBusy('saving');
         return saveEntries(result.entries, context);
       });
       if (!id) return;
-      setSuccess('자료 속 시기에 맞춰 사람별 생각을 정리했어요. 같은 시기의 기록은 함께 업데이트했습니다.');
+      setSuccess(mode === 'manual' ? 'AI 호출 없이 저장했어요.' : '해당 시기의 생각을 정리해 저장했어요.');
       setDrafts(null); setText(''); setImages([]); setTextSources([]); setIsOpen(false);
       onSaved(id);
     } catch (cause) { setError(cause instanceof Error ? cause.message : '자료를 정리하지 못했습니다.'); }
@@ -178,16 +190,21 @@ export default function FlowImport({ onSaved, assignment }: { history: ThoughtFl
       </div>
       {success && <p role="status" className="mt-3 text-xs text-emerald-700">{success}</p>}
       {isOpen && <div className="mt-5 space-y-4">
+        <div className="flex gap-2">{([['manual', '정리된 글 바로 저장'], ['ai', 'AI로 자료 정리']] as const).map(([value, label]) => <button key={value} type="button" disabled={!!busy} aria-pressed={mode === value} onClick={() => { setMode(value); setDrafts(null); }} className={`rounded-lg border px-3 py-2 text-xs ${mode === value ? 'bg-gray-900 text-white' : 'bg-white text-gray-600'}`}>{label}</button>)}</div>
+        <p className="text-xs text-gray-500">{mode === 'manual' ? 'ChatGPT 등에서 정리한 글을 그대로 저장해요. AI 비용이 들지 않아요. 사람별로 한 번씩 저장해 주세요.' : '선택한 시기의 기존 생각과 새 자료만 함께 정리해요. API 사용료가 발생해요.'}</p>
+        <label className="block space-y-2"><span className="text-xs text-gray-600">자료의 시기</span><input type="month" min="1900-01" max="2100-12" disabled={!!busy} value={month} onChange={event => setMonth(event.target.value)} className={fieldClass} /></label>
+        {mode === 'manual' && <label className="block space-y-2"><span className="text-xs text-gray-600">한 줄 제목 (선택)</span><input value={manualTitle} maxLength={100} disabled={!!busy} onChange={event => setManualTitle(event.target.value)} className={fieldClass} /></label>}
+
         <fieldset className="space-y-2"><legend className="text-xs font-medium text-gray-600">누구의 생각인가요?</legend><div className="flex flex-wrap gap-2">{['민아', '성모'].map(name => <button key={name} type="button" aria-pressed={selectedNames.includes(name)} disabled={!!busy} onClick={() => setSelectedNames(current => current.includes(name) ? current.filter(item => item !== name) : [...current, name])} className={`rounded-full border px-5 py-2 text-sm transition-colors ${selectedNames.includes(name) ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-200 bg-white text-gray-600'}`}>{name}</button>)}</div><p className="text-xs leading-5 text-gray-400">둘 다 선택할 수 있어요. 대화 자료에서는 메시지의 이름을 기준으로 생각을 구분해요.</p></fieldset>
-        <label className="block space-y-2"><span className="text-xs font-medium text-gray-600">글</span><textarea disabled={!!busy || !!drafts} value={text} maxLength={20_000} onChange={event => setText(event.target.value)} onPaste={event => { const files = Array.from<File>(event.clipboardData.files); if (files.length) { event.preventDefault(); void addFiles(files); } }} placeholder={'메시지와 날짜를 붙여 넣어 주세요.\n예: 2025년 6월 · 성모: … 민아: …'} className={`${fieldClass} min-h-40 resize-y`} /></label>
-        <div onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); if (!drafts) void addFiles(Array.from<File>(event.dataTransfer.files)); }} className="rounded-xl border border-dashed border-gray-200 bg-white p-4">
+        <label className="block space-y-2"><span className="text-xs font-medium text-gray-600">글</span><textarea disabled={!!busy || !!drafts} value={text} maxLength={mode === 'manual' ? 2000 : 20_000} onChange={event => setText(event.target.value)} onPaste={event => { const files = Array.from<File>(event.clipboardData.files); if (files.length && mode === 'ai') { event.preventDefault(); void addFiles(files); } }} placeholder={'메시지와 날짜를 붙여 넣어 주세요.\n예: 2025년 6월 · 성모: … 민아: …'} className={`${fieldClass} min-h-40 resize-y`} /></label>
+        {mode === 'ai' && <div onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); if (!drafts) void addFiles(Array.from<File>(event.dataTransfer.files)); }} className="rounded-xl border border-dashed border-gray-200 bg-white p-4">
           <input ref={fileInput} type="file" multiple accept="image/png,image/jpeg,image/webp,.txt,.md,.json" disabled={!!busy || !!drafts} className="sr-only" onChange={event => void addFiles(Array.from<File>(event.target.files || []))} aria-label="이미지 또는 글 파일 선택" />
           <button type="button" disabled={!!busy || !!drafts} onClick={() => fileInput.current?.click()} className="inline-flex items-center gap-2 text-sm text-gray-700 disabled:opacity-50"><ImagePlus className="h-4 w-4" />이미지 · 글 파일 선택</button>
           <p className="mt-2 text-xs leading-5 text-gray-400">이미지 최대 3장 · 글 20,000자. 첨부한 원본 이미지 대신 추출한 글을 보관해요.</p>
           {!!images.length && <ul className="mt-3 flex flex-wrap gap-3">{images.map(image => <li key={image.id} className="relative w-24"><img src={image.dataUrl} alt={image.name} className="h-24 w-24 rounded-lg border object-contain" /><button type="button" disabled={!!busy || !!drafts} onClick={() => setImages(current => current.filter(item => item.id !== image.id))} aria-label={`${image.name} 제거`} className="absolute right-1 top-1 rounded-full bg-white p-1 shadow"><X className="h-3 w-3" /></button></li>)}</ul>}
-        </div>
+        </div>}
         {drafts && <div className="space-y-3 rounded-xl border border-amber-100 bg-white p-4"><p className="text-sm text-gray-700">시기만 확인해 주세요</p>{drafts.map((draft, index) => <label key={draft.id} className="block space-y-1"><span className="text-xs text-gray-500">{draft.title}</span><input aria-label={`기록 ${index + 1} 시기`} disabled={!!busy} value={draft.eventDate || ''} onChange={event => setDrafts(current => current!.map(item => item.id === draft.id ? { ...item, eventDate: event.target.value || null } : item))} placeholder="YYYY-MM 또는 YYYY-MM-DD" className={fieldClass} /><span className="text-xs text-gray-400">{draft.dateEvidence || '자료에서 날짜를 찾지 못했어요.'}</span></label>)}<button type="button" disabled={!!busy} onClick={() => setDrafts(null)} className="text-xs text-gray-500">자료 다시 수정</button></div>}
-        <div className="flex justify-end"><button type="button" disabled={!!busy || (!text.trim() && !images.length) || !spaceId} onClick={() => void analyze(!!drafts)} className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm text-white disabled:opacity-40">{busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}{busy === 'files' ? '파일 준비 중' : busy === 'analyzing' ? '사람별로 정리 중' : busy === 'saving' ? '같은 시기에 반영 중' : drafts ? '확인한 시기로 정리' : 'AI로 정리해 반영'}</button></div>
+        <div className="flex justify-end"><button type="button" disabled={!!busy || (!text.trim() && !images.length) || !spaceId} onClick={() => void analyze(!!drafts)} className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm text-white disabled:opacity-40">{busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}{busy === 'files' ? '파일 준비 중' : busy === 'analyzing' ? '사람별로 정리 중' : busy === 'saving' ? '같은 시기에 반영 중' : drafts ? '확인한 시기로 정리' : mode === 'manual' ? 'AI 없이 저장' : 'AI로 정리해 반영'}</button></div>
         {error && <p role="alert" className="text-xs leading-5 text-amber-700">{error}</p>}
       </div>}
     </section>
