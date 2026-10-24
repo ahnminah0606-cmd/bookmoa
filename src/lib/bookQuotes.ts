@@ -36,3 +36,10 @@ export function buildQuoteRotation<T extends { bookId: string }>(quotes: T[], ra
   const rounds = groups.reduce((count, group) => Math.max(count, group.length), 0);
   return Array.from({ length: rounds }, (_, round) => groups.map(group => group[round % group.length])).flat();
 }
+
+// Edit against the transaction's latest list so other writers' additions survive.
+export function editSavedQuote(quotes: BookQuote[], original: string, text: string, sourceUrl: string): BookQuote[] {
+  if (!text.trim() || !quotes.some(quote => quote.text === original && !quote.hidden)) throw new Error('Quote changed');
+  if (quotes.some(quote => quote.text === text.trim() && quote.text !== original)) throw new Error('Duplicate quote');
+  return quotes.map(quote => quote.text === original ? { ...quote, text: text.trim(), sourceUrl } : quote);
+}

@@ -110,3 +110,17 @@ test('archived quotes stay stored and can be restored while other book quotes ke
   const restored = { ...archived, quoteLookup: { ...archived.quoteLookup, quotes: archived.quoteLookup.quotes.map(q => ({...q,hidden:false})) } };
   assert.equal(getSavedQuotes([restored]).length, 2);
 });
+
+test('editing a saved quote preserves other writers and rejects duplicate or removed targets', async () => {
+  const { editSavedQuote } = await import('../src/lib/bookQuotes');
+  const first = { text: '원래 문장', sourceUrl: 'https://example.com', sourceTitle: '출처' };
+  const other = { text: '함께 추가한 문장', sourceUrl: '', sourceTitle: '' };
+  const result = editSavedQuote([first, other], first.text, '  수정한 문장  ', 'https://example.org');
+  assert.equal(result[0].text, '수정한 문장');
+  assert.equal(result[0].sourceTitle, first.sourceTitle);
+  assert.deepEqual(result[1], other);
+  assert.equal(first.text, '원래 문장');
+  assert.throws(() => editSavedQuote([first, other], first.text, other.text, ''));
+  assert.throws(() => editSavedQuote([{ ...first, hidden: true }], first.text, '수정', ''));
+  assert.throws(() => editSavedQuote([other], first.text, '수정', ''));
+});

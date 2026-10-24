@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { Home, Book, Library, Activity, Trash2, ChevronDown, LogOut, UserPlus, Copy, Check, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Home, Book, Library, Activity, Quote, Trash2, ChevronDown, LogOut, UserPlus, Copy, Check, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { BrandLogo } from '@/components/common/BrandLogo';
 
@@ -138,6 +138,9 @@ export default function AppLayout() {
             </span>}
           </button>
           
+          <Link to="/quotes" aria-label="명문장 관리" title={isSidebarCollapsed ? '명문장 관리' : undefined} className={cn('flex items-center rounded-lg py-2 text-xs font-medium transition-colors', isSidebarCollapsed ? 'justify-center px-0' : 'gap-2.5 px-3', isNavActive('/quotes') ? 'bg-gray-50 text-gray-900' : 'text-gray-500 hover:bg-gray-50')}>
+            <Quote className="h-4 w-4 shrink-0 text-gray-400" />{!isSidebarCollapsed && <span>명문장 관리</span>}
+          </Link>
           <Link
             to="/trash"
             className={cn(
@@ -249,6 +252,7 @@ export default function AppLayout() {
             </div>
             <div className="space-y-1">
               <button type="button" onClick={() => { setIsMobileMoreOpen(false); setIsInviteModalOpen(true); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-sm text-gray-700 hover:bg-gray-50"><UserPlus className="h-4 w-4 text-gray-400" /><span className="flex-1">파트너 초대</span><span className="max-w-28 truncate font-mono text-[10px] text-gray-400">{inviteCode}</span></button>
+              <Link to="/quotes" className="flex items-center gap-3 rounded-xl px-3 py-3.5 text-sm text-gray-700 hover:bg-gray-50"><Quote className="h-4 w-4 text-gray-400" /><span>명문장 관리</span></Link>
               <Link to="/trash" className="flex items-center gap-3 rounded-xl px-3 py-3.5 text-sm text-gray-700 hover:bg-gray-50"><Trash2 className="h-4 w-4 text-gray-400" /><span>휴지통</span></Link>
               <button type="button" onClick={handleLogout} className="flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-sm text-red-600 hover:bg-red-50/50"><LogOut className="h-4 w-4" /><span>로그아웃</span></button>
             </div>

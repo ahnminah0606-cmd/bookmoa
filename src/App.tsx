@@ -15,6 +15,7 @@ import Library from './pages/Library';
 import Flow from './pages/Flow';
 import BookDetail from './pages/BookDetail';
 import Trash from './pages/Trash';
+import QuoteManager from './pages/QuoteManager';
 import Login from './pages/Login';
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -56,6 +57,7 @@ export default function App() {
               <Route path="library" element={<Library />} />
               <Route path="library/:id" element={<BookDetail />} />
               <Route path="flow" element={<Flow />} />
+              <Route path="quotes" element={<QuoteManager />} />
               <Route path="trash" element={<Trash />} />
             </Route>
             {/* Fallback route */}
