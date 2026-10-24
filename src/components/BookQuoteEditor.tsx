@@ -61,7 +61,6 @@ export default function BookQuoteEditor({ book, management = false }: { book: Bo
   return <details className="rounded-xl border border-gray-100 p-4 text-sm">
     <summary className="cursor-pointer text-gray-600">{management ? <span className="font-medium text-gray-900">{book.title}<span className="ml-2 text-xs font-normal text-gray-400">{quotes.filter(quote => !quote.hidden).length}문장</span></span> : '홈 명문장 추가'}</summary>
     <div className="mt-4 space-y-3">
-      <p className="text-xs text-gray-500">GPT에서 찾은 실제 책 속 문장을 넣어 주세요. 자동 검색이나 AI 호출 없이 저장합니다. 출처는 내부에 보관해요.</p>
       <label className="block">문장<textarea aria-label="홈에 표시할 명문장" disabled={busy} maxLength={500} value={text} onChange={event => setText(event.target.value)} className="mt-1 min-h-24 w-full rounded border p-2" /></label>
       <label className="block">출처 주소 (선택)<input type="url" disabled={busy} value={url} onChange={event => setUrl(event.target.value)} className="mt-1 w-full rounded border p-2" /></label>
       <button type="button" onClick={() => void save()} disabled={busy} className="rounded-lg bg-gray-900 px-4 py-2 text-white disabled:opacity-40">{busy ? '저장 중' : editing === null ? '문장 저장' : '수정 저장'}</button>
