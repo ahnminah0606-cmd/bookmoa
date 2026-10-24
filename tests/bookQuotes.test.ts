@@ -7,7 +7,7 @@ import type { Book } from '../src/types';
 
 const quote = { text: '나의 세계는 오늘도 새롭게 태어난다.', sourceUrl: 'https://www.yes24.com/Product/Goods/123', sourceTitle: '테스트 도서 발췌' };
 const book: Book = { id: 'new-book', spaceId: 'space', title: '테스트 도서', author: '테스트 작가', status: 'planned', createdAt: '2026-10-24' };
-const saved: Book = { ...book, quoteLookup: { key: quoteBookKey(book), status: 'ready', quotes: [quote], backgroundRetryVersion: 1, checkedAt: '2026-10-24' } };
+const saved: Book = { ...book, quoteLookup: { key: quoteBookKey(book), status: 'ready', quotes: [quote], backgroundRetryVersion: 2, checkedAt: '2026-10-24' } };
 const source = new Set([quote.sourceUrl]);
 const fetchPage = (html: string) => (async () => new Response(html, { status: 200 })) as typeof fetch;
 const page = `<h1>${book.title}</h1><h2>${book.author}</h2><section>책 속으로<p>${quote.text}</p></section>`;
@@ -78,7 +78,7 @@ test('previous unsuccessful lookups retry once in the background, with no refres
   for (const status of ['error', 'not_found'] as const) {
     const old = { ...saved, quoteLookup: { ...saved.quoteLookup!, status, backgroundRetryVersion: undefined } };
     assert.equal(needsQuoteLookup(old), true);
-    assert.equal(needsQuoteLookup({ ...old, quoteLookup: { ...old.quoteLookup, backgroundRetryVersion: 1 } }), false);
+    assert.equal(needsQuoteLookup({ ...old, quoteLookup: { ...old.quoteLookup, backgroundRetryVersion: 2 } }), false);
   }
   assert.equal(needsQuoteLookup(saved), false);
 });
@@ -93,4 +93,12 @@ test('rotation gives every book a turn before its next quote, including uneven q
   for (const q of quotes) assert.ok(deck.includes(q));
   assert.deepEqual(buildQuoteRotation([]), []);
   assert.deepEqual(buildQuoteRotation([quotes[0]]), [quotes[0]]);
+});
+
+
+test('one unavailable source does not discard a verified quote from another bookshop', async () => {
+  const unavailable = { ...quote, sourceUrl: 'https://www.aladin.co.kr/shop/wproduct.aspx?ItemId=123' };
+  const sources = new Set([quote.sourceUrl, unavailable.sourceUrl]);
+  const fetcher = (async (url: string) => url === quote.sourceUrl ? new Response(page) : new Response('', {status:503})) as typeof fetch;
+  assert.deepEqual(await verifyQuoteCandidates([unavailable, quote], book.title, book.author, sources, fetcher), [quote]);
 });

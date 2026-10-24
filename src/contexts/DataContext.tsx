@@ -64,7 +64,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         if (!snapshot.exists()) return;
         const latest = snapshot.data() as Book;
         if (latest.deletedAt || quoteBookKey(latest) !== key) return;
-        transaction.update(ref, { quoteLookup: { ...lookup, backgroundRetryVersion: 1 } });
+        transaction.update(ref, { quoteLookup: { ...lookup, backgroundRetryVersion: 2 } });
       });
     };
     void (async () => {

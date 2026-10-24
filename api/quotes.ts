@@ -14,6 +14,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await verifyFirebaseToken(req.headers.authorization, process.env.FIREBASE_PROJECT_ID);
     return res.status(200).json({ quotes: await findBookQuotes(req.body || {}) });
   } catch (error) {
+    console.error('Book quote lookup failed', error instanceof Error ? { name: error.name, message: error.message } : 'Unknown error');
     const failure = quoteError(error);
     return res.status(failure.status).json({ error: failure.error });
   }
