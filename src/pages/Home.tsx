@@ -1,23 +1,21 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useData } from '@/contexts/DataContext';
-import { getSavedQuotes } from '@/lib/bookQuotes';
+import { getSavedQuotes, buildQuoteRotation } from '@/lib/bookQuotes';
 import { Sparkles } from 'lucide-react';
 
 export default function Home() {
   const { books, isLoading } = useData();
   const quotes = useMemo(() => getSavedQuotes(books), [books]);
   const [selected, setSelected] = useState(0);
-  const quote = quotes[selected % Math.max(quotes.length, 1)];
   const quoteListKey = JSON.stringify(quotes.map(quote => [quote.bookId, quote.text]));
+  const rotation = useMemo(() => buildQuoteRotation(quotes), [quoteListKey]);
+  const quote = rotation[selected % Math.max(rotation.length, 1)];
 
-  useEffect(() => {
-    setSelected(Math.floor(Math.random() * Math.max(quotes.length, 1)));
-  }, [quoteListKey]);
+  useEffect(() => { setSelected(0); }, [quoteListKey]);
 
   const pickRandomQuote = () => {
-    if (quotes.length < 2) return;
-    const offset = 1 + Math.floor(Math.random() * (quotes.length - 1));
-    setSelected(index => (index + offset) % quotes.length);
+    if (rotation.length < 2) return;
+    setSelected(index => (index + 1) % rotation.length);
   };
 
   return (

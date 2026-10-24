@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { getSavedQuotes, needsQuoteLookup, quoteBookKey } from '../src/lib/bookQuotes';
+import { getSavedQuotes, needsQuoteLookup, quoteBookKey, buildQuoteRotation } from '../src/lib/bookQuotes';
 import { isBookSource, normalizeSource, verifyQuoteCandidates, findBookQuotes } from '../server/bookQuotes';
 import handler from '../api/quotes';
 import type { Book } from '../src/types';
@@ -81,4 +81,16 @@ test('previous unsuccessful lookups retry once in the background, with no refres
     assert.equal(needsQuoteLookup({ ...old, quoteLookup: { ...old.quoteLookup, backgroundRetryVersion: 1 } }), false);
   }
   assert.equal(needsQuoteLookup(saved), false);
+});
+
+
+test('rotation gives every book a turn before its next quote, including uneven quote counts', () => {
+  const quotes = [{bookId:'혼모노', n:1}, {bookId:'혼모노', n:2}, {bookId:'한국사', n:1}, {bookId:'데미안', n:1}, {bookId:'데미안', n:2}, {bookId:'데미안', n:3}];
+  const deck = buildQuoteRotation(quotes, () => 0.99);
+  assert.deepEqual(deck.slice(0, 4), [quotes[0], quotes[2], quotes[3], quotes[1]]);
+  for (let i = 0; i < deck.length; i += 3) assert.equal(new Set(deck.slice(i, i + 3).map(q => q.bookId)).size, 3);
+  for (let i = 0; i < deck.length; i++) assert.notEqual(deck[i].bookId, deck[(i+1) % deck.length].bookId);
+  for (const q of quotes) assert.ok(deck.includes(q));
+  assert.deepEqual(buildQuoteRotation([]), []);
+  assert.deepEqual(buildQuoteRotation([quotes[0]]), [quotes[0]]);
 });
