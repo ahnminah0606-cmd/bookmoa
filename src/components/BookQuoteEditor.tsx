@@ -37,6 +37,23 @@ export default function BookQuoteEditor({ book }: { book: Book }) {
     } catch { setMessage('저장하지 못했어요. 잠시 후 다시 시도해 주세요.'); }
     finally { setBusy(false); }
   };
+  const toggle = async (quoteText: string, hidden: boolean) => {
+    if (!spaceId || busy) return;
+    setBusy(true); setMessage('');
+    try {
+      const ref = doc(db, 'spaces', spaceId, 'books', book.id);
+      await runTransaction(db, async transaction => {
+        const snapshot = await transaction.get(ref);
+        if (!snapshot.exists()) throw new Error('Book not found');
+        const latest = snapshot.data() as Book;
+        if (!latest.quoteLookup || quoteBookKey(latest) !== quoteBookKey(book)) throw new Error('Book changed');
+        transaction.update(ref, { quoteLookup: { ...latest.quoteLookup, quotes: latest.quoteLookup.quotes.map(quote => quote.text === quoteText ? { ...quote, hidden } : quote) } });
+      });
+      setMessage(hidden ? '홈에서 제외했어요. 아래 보관한 문장에서 복구할 수 있어요.' : '홈에 다시 표시합니다.');
+    } catch { setMessage('변경하지 못했어요. 다시 시도해 주세요.'); }
+    finally { setBusy(false); }
+  };
+  const quotes = book.quoteLookup?.key === quoteBookKey(book) ? book.quoteLookup.quotes : [];
   return <details className="rounded-xl border border-gray-100 p-4 text-sm">
     <summary className="cursor-pointer text-gray-600">홈 명문장 추가</summary>
     <div className="mt-4 space-y-3">
@@ -44,6 +61,8 @@ export default function BookQuoteEditor({ book }: { book: Book }) {
       <label className="block">문장<textarea aria-label="홈에 표시할 명문장" disabled={busy} maxLength={500} value={text} onChange={event => setText(event.target.value)} className="mt-1 min-h-24 w-full rounded border p-2" /></label>
       <label className="block">출처 주소 (선택)<input type="url" disabled={busy} value={url} onChange={event => setUrl(event.target.value)} className="mt-1 w-full rounded border p-2" /></label>
       <button type="button" onClick={() => void save()} disabled={busy} className="rounded-lg bg-gray-900 px-4 py-2 text-white disabled:opacity-40">{busy ? '저장 중' : '문장 저장'}</button>
+      <ul className="space-y-2">{quotes.filter(quote => !quote.hidden).map(quote => <li key={quote.text} className="flex items-start justify-between gap-3 border-t pt-2"><span className="whitespace-pre-wrap">{quote.text}</span><button type="button" disabled={busy} onClick={() => void toggle(quote.text, true)} className="shrink-0 text-xs text-gray-400">홈에서 제외</button></li>)}</ul>
+      {quotes.some(quote => quote.hidden) && <details><summary className="cursor-pointer text-xs text-gray-400">보관한 문장</summary><ul className="mt-2 space-y-2">{quotes.filter(quote => quote.hidden).map(quote => <li key={quote.text} className="flex items-start justify-between gap-3"><span>{quote.text}</span><button type="button" disabled={busy} onClick={() => void toggle(quote.text, false)} className="text-xs text-gray-500">복구</button></li>)}</ul></details>}
       {message && <p role="status" className="text-xs text-gray-500">{message}</p>}
     </div>
   </details>;

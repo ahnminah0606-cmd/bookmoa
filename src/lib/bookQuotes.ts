@@ -6,7 +6,7 @@ export function quoteBookKey(book: Pick<Book, 'title' | 'author' | 'isbn'>): str
 
 export function getSavedQuotes(books: Book[]): (BookQuote & { bookId: string; bookTitle: string })[] {
   return books.filter(book => !book.deletedAt && book.quoteLookup?.status === 'ready' && book.quoteLookup.key === quoteBookKey(book))
-    .flatMap(book => (book.quoteLookup?.quotes || []).map(quote => ({
+    .flatMap(book => (book.quoteLookup?.quotes || []).filter(quote => !quote.hidden).map(quote => ({
       ...quote, bookId: book.id, bookTitle: book.title,
     })));
 }

@@ -17,6 +17,7 @@ export type Space = {
 export type BookStatus = 'reading' | 'completed' | 'planned';
 
 export type BookQuote = {
+  hidden?: boolean;
   text: string;
   sourceUrl: string;
   sourceTitle: string;

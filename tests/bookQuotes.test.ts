@@ -102,3 +102,11 @@ test('one unavailable source does not discard a verified quote from another book
   const fetcher = (async (url: string) => url === quote.sourceUrl ? new Response(page) : new Response('', {status:503})) as typeof fetch;
   assert.deepEqual(await verifyQuoteCandidates([unavailable, quote], book.title, book.author, sources, fetcher), [quote]);
 });
+
+
+test('archived quotes stay stored and can be restored while other book quotes keep rotating', () => {
+  const archived = { ...saved, quoteLookup: { ...saved.quoteLookup!, quotes: [{ ...quote, hidden: true }, { ...quote, text: '다른 생각을 전하는 문장입니다.' }] } };
+  assert.deepEqual(getSavedQuotes([archived]).map(q => q.text), ['다른 생각을 전하는 문장입니다.']);
+  const restored = { ...archived, quoteLookup: { ...archived.quoteLookup, quotes: archived.quoteLookup.quotes.map(q => ({...q,hidden:false})) } };
+  assert.equal(getSavedQuotes([restored]).length, 2);
+});
