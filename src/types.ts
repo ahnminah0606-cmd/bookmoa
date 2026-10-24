@@ -23,6 +23,7 @@ export type BookQuote = {
 };
 
 export type BookQuoteLookup = {
+  backgroundRetryVersion?: number;
   key: string;
   status: 'ready' | 'not_found' | 'error';
   quotes: BookQuote[];
