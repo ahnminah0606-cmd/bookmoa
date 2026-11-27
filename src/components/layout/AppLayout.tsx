@@ -96,14 +96,13 @@ export default function AppLayout() {
                   aria-label={item.name}
                   className={cn(
                     'flex items-center rounded-lg py-2.5 text-sm transition-colors',
-                    isSidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-3.5',
+                    isSidebarCollapsed ? 'justify-center px-0' : 'px-3.5',
                     isActive
                       ? 'font-medium text-gray-900 bg-gray-50'
                       : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50/50'
                   )}
                 >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  {!isSidebarCollapsed && item.name}
+                  {isSidebarCollapsed ? <Icon className="h-4 w-4 shrink-0" /> : item.name}
                 </Link>
               );
             })}
